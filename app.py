@@ -13,7 +13,7 @@ st.markdown("""
     header {visibility: hidden;}
     .block-container { padding-top: 1rem; padding-left: 0.5rem; padding-right: 0.5rem; max-width: 600px; }
     
-    /* 1. Bordas dos inputs (Padrão Conf. Jogos) */
+    /* 1. Bordas dos inputs */
     div[data-testid="stTextInput"] > div,
     div[data-testid="stTextInput"] div[data-baseweb="base-input"],
     div[data-testid="stTextInputRootElement"],
@@ -24,7 +24,6 @@ st.markdown("""
         border-radius: 8px !important;
         transition: all 0.25s ease-in-out !important;
     }
-    /* Foco verde */
     div[data-testid="stTextInput"] > div:focus-within,
     div[data-testid="stTextInput"] div[data-baseweb="base-input"]:focus-within,
     div[data-testid="stTextInputRootElement"]:focus-within,
@@ -43,26 +42,54 @@ st.markdown("""
     div.st-key-btn_sair button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
     div.st-key-btn_sair button * { color: white !important; }
 
-    /* 3. Cor das Setas e Fundo Azul Claro do Mês */
-    div.st-key-btn_prev button, div.st-key-btn_next button { 
-        background-color: #0d6efd !important; border: 1px solid #0d6efd !important; 
-        height: 38px !important; padding: 0 !important;
-    }
-    div.st-key-btn_prev button *, div.st-key-btn_next button * { color: white !important; }
-    
+    /* 3. Cabeçalho do Mês (CORRIGIDO) */
     div[class*="st-key-nav_mes"] div[data-testid="stHorizontalBlock"] { 
-        background-color: #e3f2fd !important; /* Azul bem claro */
+        background-color: #e3f2fd !important; 
         border-radius: 10px !important;
-        padding: 5px 10px !important;
-        display: flex !important; flex-wrap: nowrap !important; align-items: center !important;
+        padding: 5px 8px !important; 
+        display: flex !important; 
+        flex-direction: row !important;
+        flex-wrap: nowrap !important; 
+        align-items: center !important;
     }
-    div[class*="st-key-nav_mes"] div[data-testid="stColumn"] { padding: 0 !important; min-width: 0 !important; }
+    /* Removida a regra que forçava todas as colunas a terem o mesmo tamanho */
+    div[class*="st-key-nav_mes"] div[data-testid="stColumn"] { 
+        padding: 0 !important; 
+        min-width: 0 !important;
+    }
+    div[class*="st-key-nav_mes"] button { 
+        background-color: #0d6efd !important; border: 1px solid #0d6efd !important; 
+        height: 38px !important; padding: 0 !important; width: 100% !important;
+    }
+    div[class*="st-key-nav_mes"] button * { color: white !important; }
+    
+    /* Força o texto do mês a nunca quebrar de linha */
+    div[class*="st-key-nav_mes"] h4 {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
 
-    /* 4. Cor do botão Desmarcar Pagamento (Laranja) */
-    div[class*="st-key-btn_desmarcar_"] button {
-        background-color: #fd7e14 !important; border: 1px solid #fd7e14 !important;
+    /* 4. Força a linha de botões (Pagar, Editar, Excluir) a ficar lado a lado */
+    div[class*="st-key-btn_row_"] div[data-testid="stHorizontalBlock"] {
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px !important;
     }
+    div[class*="st-key-btn_row_"] div[data-testid="stColumn"] {
+        flex: 1 1 0% !important; min-width: 0 !important; padding: 0 !important;
+    }
+    div[class*="st-key-btn_row_"] button {
+        font-size: 11px !important; padding: 0.2rem 0 !important; width: 100% !important;
+    }
+
+    /* 5. Cores dos Botões de Ação */
+    div[class*="st-key-btn_pagar_"] button { background-color: #198754 !important; border-color: #198754 !important; }
+    div[class*="st-key-btn_pagar_"] button * { color: white !important; }
+    div[class*="st-key-btn_desmarcar_"] button { background-color: #fd7e14 !important; border-color: #fd7e14 !important; }
     div[class*="st-key-btn_desmarcar_"] button * { color: white !important; }
+    div[class*="st-key-btn_edit_"] button { background-color: #0d6efd !important; border-color: #0d6efd !important; }
+    div[class*="st-key-btn_edit_"] button * { color: white !important; }
+    div[class*="st-key-btn_del_"] button { background-color: #dc3545 !important; border-color: #dc3545 !important; }
+    div[class*="st-key-btn_del_"] button * { color: white !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -130,7 +157,7 @@ def modal_editar(conta):
 
 @st.dialog("Excluir Conta")
 def modal_excluir(conta_id, descricao):
-    st.warning(f"Tem certeza que deseja excluir a conta **{descricao}**? Essa ação não pode ser desfeita.")
+    st.warning(f"Tem certeza que deseja excluir a conta **{descricao}**?")
     if st.button("Sim, Excluir", type="primary", use_container_width=True):
         if gs.excluir_conta(conta_id):
             st.rerun()
@@ -165,7 +192,6 @@ if not st.session_state["logado"]:
     st.stop()
 
 # ---------------- TELA PRINCIPAL ----------------
-# Topo: Usuário e Logout (Agora dentro de um Expander)
 with st.expander("👤 Conta e Configurações", expanded=False):
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -176,24 +202,21 @@ with st.expander("👤 Conta e Configurações", expanded=False):
             st.session_state["usuario"] = ""
             st.rerun()
 
-# Cabeçalho do Mês
+# Cabeçalho do Mês (Proporção ajustada para [1, 4, 1] para dar mais espaço ao texto)
 with st.container(key="nav_mes"):
-    col_prev, col_titulo, col_next = st.columns([1, 3, 1])
-    
+    col_prev, col_titulo, col_next = st.columns([1, 4, 1])
     with col_prev:
-        if st.button("◀", use_container_width=True, key="btn_prev"):
+        if st.button("◀", key="btn_prev"):
             st.session_state["mes_atual"] -= relativedelta(months=1)
             st.rerun()
-
     with col_titulo:
         nome_mes = st.session_state["mes_atual"].strftime("%B/%Y").capitalize()
         meses_pt = {"January": "Janeiro", "February": "Fevereiro", "March": "Março", "April": "Abril", "May": "Maio", "June": "Junho", "July": "Julho", "August": "Agosto", "September": "Setembro", "October": "Outubro", "November": "Novembro", "December": "Dezembro"}
         for en, pt in meses_pt.items():
             if en in nome_mes: nome_mes = nome_mes.replace(en, pt)
-        st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 18px; color: #0d6efd; font-weight: bold;'>{nome_mes}</h4>", unsafe_allow_html=True)
-
+        st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 16px; color: #0d6efd; font-weight: bold; padding-top: 8px;'>{nome_mes}</h4>", unsafe_allow_html=True)
     with col_next:
-        if st.button("▶", use_container_width=True, key="btn_next"):
+        if st.button("▶", key="btn_next"):
             st.session_state["mes_atual"] += relativedelta(months=1)
             st.rerun()
 
@@ -202,12 +225,10 @@ st.write("")
 mes_busca = st.session_state["mes_atual"].strftime("%Y-%m")
 contas_do_mes = gs.carregar_contas(st.session_state["usuario"], mes_busca)
 
-# Calcula os totais
 total_mes = sum(float(c['Valor']) for c in contas_do_mes)
 total_pago = sum(float(c['Valor']) for c in contas_do_mes if c['Status'] == 'Pago')
 total_pendente = total_mes - total_pago
 
-# --- CARDS DE RESUMO ---
 def fmt_moeda(v):
     return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
@@ -228,7 +249,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- BOTÃO ADICIONAR CONTA ---
 if st.button("➕ Adicionar Nova Conta", type="primary", use_container_width=True):
     modal_adicionar()
 
@@ -241,8 +261,25 @@ else:
     for conta in contas_do_mes:
         valor_fmt = fmt_moeda(float(conta['Valor']))
         
-        with st.container(border=True):
-            # Linha 1: Descrição e Valor
+        if conta['Status'] == 'Pago':
+            bg_color, border_color = "#d4edda", "#c3e6cb"
+        else:
+            bg_color, border_color = "#f8d7da", "#f5c6cb"
+            
+        st.markdown(f"""
+        <style>
+        div[class*="st-key-card_{conta['ID_Unico']}"] {{
+            background-color: {bg_color} !important;
+            border: 1px solid {border_color} !important;
+            border-radius: 10px !important;
+            padding: 12px !important;
+            margin-bottom: 10px !important;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+        
+        with st.container(key=f"card_{conta['ID_Unico']}"):
+            
             st.markdown(f"""
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div style="font-weight: 700; font-size: 16px; color: #333;">{conta['Descricao']}</div>
@@ -250,14 +287,13 @@ else:
             </div>
             """, unsafe_allow_html=True)
             
-            # Linha 2: Vencimento e Status (com a label STATUS acima)
             st.markdown(f"""
             <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 5px;">
                 <div style="font-size: 12px; color: #6c757d; margin-bottom: 2px;">📅 Vence: {conta['Vencimento']}</div>
                 <div style="text-align: right;">
                     <div style="font-size: 9px; color: #adb5bd; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px;">STATUS</div>
                     <div>
-                        {'<span style="background:#d4edda; color:#155724; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>' if conta['Status'] == 'Pago' else '<span style="background:#fff3cd; color:#856404; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'}
+                        {'<span style="background:#155724; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>' if conta['Status'] == 'Pago' else '<span style="background:#856404; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'}
                     </div>
                 </div>
             </div>
@@ -271,22 +307,23 @@ else:
             
             st.write("")
             
-            # --- BOTÕES DE AÇÃO ---
-            btn_col1, btn_col2, btn_col3 = st.columns([2, 1, 1])
-            
-            with btn_col1:
-                if conta['Status'] == 'Pendente':
-                    if st.button("✅ Pagar", key=f"btn_pagar_{conta['ID_Unico']}", use_container_width=True, type="primary"):
-                        modal_pagar(conta['ID_Unico'], float(conta['Valor']))
-                else:
-                    if st.button("↩️ Desmarcar", key=f"btn_desmarcar_{conta['ID_Unico']}", use_container_width=True):
-                        if gs.atualizar_status_conta(conta['ID_Unico'], "Pendente", ""):
-                            st.rerun()
-                            
-            with btn_col2:
-                if st.button("✏️ Editar", key=f"btn_edit_{conta['ID_Unico']}", use_container_width=True):
-                    modal_editar(conta)
-                    
-            with btn_col3:
-                if st.button("🗑️ Excluir", key=f"btn_del_{conta['ID_Unico']}", use_container_width=True):
-                    modal_excluir(conta['ID_Unico'], conta['Descricao'])
+            # --- BOTÕES LADO A LADO COM FORÇA BRUTA ---
+            with st.container(key=f"btn_row_{conta['ID_Unico']}"):
+                btn_col1, btn_col2, btn_col3 = st.columns(3)
+                
+                with btn_col1:
+                    if conta['Status'] == 'Pendente':
+                        if st.button("✅ Pagar", key=f"btn_pagar_{conta['ID_Unico']}", use_container_width=True):
+                            modal_pagar(conta['ID_Unico'], float(conta['Valor']))
+                    else:
+                        if st.button("↩️ Desmarcar", key=f"btn_desmarcar_{conta['ID_Unico']}", use_container_width=True):
+                            if gs.atualizar_status_conta(conta['ID_Unico'], "Pendente", ""):
+                                st.rerun()
+                                
+                with btn_col2:
+                    if st.button("✏️ Editar", key=f"btn_edit_{conta['ID_Unico']}", use_container_width=True):
+                        modal_editar(conta)
+                        
+                with btn_col3:
+                    if st.button("🗑️ Excluir", key=f"btn_del_{conta['ID_Unico']}", use_container_width=True):
+                        modal_excluir(conta['ID_Unico'], conta['Descricao'])
