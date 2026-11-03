@@ -51,11 +51,11 @@ st.markdown("""
     div.st-key-btn_sair button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
     div.st-key-btn_sair button * { color: white !important; }
 
-    /* 3. Cabeçalho do Mês */
+    /* 3. Cabeçalho do Mês (Reduzido) */
     div[class*="st-key-nav_mes"] div[data-testid="stHorizontalBlock"] { 
         background-color: #e3f2fd !important; 
         border-radius: 10px !important;
-        padding: 5px 8px !important; 
+        padding: 3px 8px !important; /* Reduzido */
         display: flex !important; 
         flex-direction: row !important;
         flex-wrap: nowrap !important; 
@@ -65,11 +65,16 @@ st.markdown("""
     div[class*="st-key-nav_mes"] div[data-testid="stColumn"] { padding: 0 !important; min-width: 0 !important; }
     div[class*="st-key-nav_mes"] button { 
         background-color: #0d6efd !important; border: 1px solid #0d6efd !important; 
-        height: 38px !important; padding: 0 !important; width: 100% !important; font-size: 12px !important;
+        height: 32px !important; /* Reduzido de 38 para 32 */
+        padding: 0 !important; width: 100% !important; font-size: 12px !important;
     }
     div[class*="st-key-nav_mes"] button * { color: white !important; }
+    div[class*="st-key-nav_mes"] h4 {
+        padding-top: 5px !important;
+        font-size: 15px !important; /* Fonte um pouco menor */
+    }
 
-    /* 4. Força a linha de botões (Pagar, Editar, Excluir) a ficar lado a lado */
+    /* 4. Força a linha de botões (Pagar, Editar, Excluir) a ficar lado a lado e mais fina */
     div[class*="st-key-btn_row_"] div[data-testid="stHorizontalBlock"] {
         display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px !important;
     }
@@ -77,22 +82,35 @@ st.markdown("""
         flex: 1 1 0% !important; min-width: 0 !important; padding: 0 !important;
     }
     div[class*="st-key-btn_row_"] button {
-        font-size: 11px !important; padding: 0.2rem 0 !important; width: 100% !important;
+        font-size: 11px !important; 
+        height: 30px !important; /* Força altura fixa menor */
+        min-height: 30px !important;
+        padding: 0 !important; 
+        width: 100% !important;
+        display: flex !important; align-items: center !important; justify-content: center !important;
     }
-
-    /* 5. TODOS OS BOTÕES DE AÇÃO AZUIS */
-    div[class*="st-key-btn_pagar_"] button, 
-    div[class*="st-key-btn_desmarcar_"] button,
-    div[class*="st-key-btn_edit_"] button, 
-    div[class*="st-key-btn_del_"] button {
-        background-color: #0d6efd !important; 
-        border: 1px solid #0d6efd !important;
+    
+    /* 🎯 Borda e Destaque no Checkbox */
+    div[data-testid="stCheckbox"] {
+        background-color: #f8f9fa !important;
+        padding: 8px 12px !important;
+        border-radius: 8px !important;
+        border: 1.2px solid #0d6efd !important;
+        margin-bottom: 12px !important;
     }
-    div[class*="st-key-btn_pagar_"] button *,
-    div[class*="st-key-btn_desmarcar_"] button *,
-    div[class*="st-key-btn_edit_"] button *, 
-    div[class*="st-key-btn_del_"] button * { 
-        color: white !important; 
+    
+    /* Deixa o quadradinho do checkbox com borda visível */
+    div[data-testid="stCheckbox"] div[data-baseweb="checkbox"] > div:first-child {
+        border: 2px solid #0d6efd !important;
+        border-radius: 4px !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Deixa o texto do checkbox azul e em negrito */
+    div[data-testid="stCheckbox"] p {
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        color: #0d6efd !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -102,17 +120,24 @@ if "logado" not in st.session_state: st.session_state["logado"] = False
 if "usuario" not in st.session_state: st.session_state["usuario"] = ""
 if "mes_atual" not in st.session_state: st.session_state["mes_atual"] = datetime.date.today().replace(day=1)
 
-BANCOS = ["Nubank", "Itaú", "Caixa", "Bradesco", "Santander", "PicPay", "Inter", "C6 Bank", "Banco do Brasil", "Outro"]
+BANCOS = ["", "Banco do Brasil", "Bradesco", "C6 Bank", "Caixa", "Dinheiro", "Inter", "Itaú", "Nubank", "PicPay", "Santander", "Sicredi"]
 
 # ---------------- MODAIS ----------------
 @st.dialog("Confirmar Pagamento")
 def modal_pagar(conta_id, valor):
     st.write(f"Deseja confirmar o pagamento de **R$ {valor:.2f}**?")
     data_pag = st.date_input("Data do Pagamento", value=datetime.date.today(), format="DD/MM/YYYY")
-    banco_pag = st.selectbox("Banco utilizado", BANCOS)
+    
+    # Checkbox para cadastrar novo banco na hora do pagamento
+    novo_banco = st.checkbox("Cadastrar novo banco")
+    
+    if novo_banco:
+        banco_final = st.text_input("Digite o nome do banco")
+    else:
+        banco_final = st.selectbox("Banco utilizado", BANCOS)
     
     if st.button("Confirmar e Pagar", type="primary", use_container_width=True):
-        if gs.atualizar_status_conta(conta_id, "Pago", data_pag.strftime("%d/%m/%Y"), banco_pag):
+        if gs.atualizar_status_conta(conta_id, "Pago", data_pag.strftime("%d/%m/%Y"), banco_final):
             st.rerun()
 
 @st.dialog("Adicionar Nova Conta")
@@ -161,16 +186,27 @@ def modal_editar(conta):
         data_venc_obj = datetime.datetime.strptime(conta['Vencimento'], "%d/%m/%Y").date()
         novo_venc = st.date_input("Vencimento", value=data_venc_obj, format="DD/MM/YYYY")
     
-    banco_atual = conta.get('Banco', '')
-    if banco_atual not in BANCOS: 
-        banco_atual = "Nubank"
-    novo_banco = st.selectbox("Banco utilizado", BANCOS, index=BANCOS.index(banco_atual))
+    # Lógica inteligente do Banco
+    banco_salvo = conta.get('Banco', '')
+    
+    # Se o banco salvo existir, mas não estiver na lista padrão, já abre o checkbox preenchido
+    if banco_salvo and banco_salvo not in BANCOS:
+        novo_banco = st.checkbox("Cadastrar novo banco", value=True)
+        banco_final = st.text_input("Digite o nome do banco", value=banco_salvo)
+    else:
+        novo_banco = st.checkbox("Cadastrar novo banco")
+        if novo_banco:
+            banco_final = st.text_input("Digite o nome do banco")
+        else:
+            # Se estiver vazio ou na lista, seleciona a opção correta
+            idx_banco = BANCOS.index(banco_salvo) if banco_salvo in BANCOS else 0
+            banco_final = st.selectbox("Banco utilizado", BANCOS, index=idx_banco)
         
     nova_obs = st.text_input("Observação", value=conta.get('Observacao', ''))
     
     if st.button("Salvar Alterações", type="primary", use_container_width=True):
         val_final = val_input if val_input is not None else 0.0
-        if gs.editar_conta(conta['ID_Unico'], conta['Descricao'], val_final, novo_venc.strftime("%d/%m/%Y"), nova_obs, novo_banco):
+        if gs.editar_conta(conta['ID_Unico'], conta['Descricao'], val_final, novo_venc.strftime("%d/%m/%Y"), nova_obs, banco_final):
             st.rerun()
 
 @st.dialog("Excluir Conta")
@@ -233,7 +269,7 @@ with st.container(key="nav_mes"):
         meses_pt = {"January": "Janeiro", "February": "Fevereiro", "March": "Março", "April": "Abril", "May": "Maio", "June": "Junho", "July": "Julho", "August": "Agosto", "September": "Setembro", "October": "Outubro", "November": "Novembro", "December": "Dezembro"}
         for en, pt in meses_pt.items():
             if en in nome_mes: nome_mes = nome_mes.replace(en, pt)
-        st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 16px; color: #0d6efd; font-weight: bold; padding-top: 8px;'>{nome_mes}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 15px; color: #0d6efd; font-weight: bold; padding-top: 6px;'>{nome_mes}</h4>", unsafe_allow_html=True)
             
     with col_next:
         if st.button("Próximo ▶", key="btn_next", use_container_width=True):
@@ -281,11 +317,17 @@ else:
     for conta in contas_do_mes:
         valor_fmt = fmt_moeda(float(conta['Valor']))
         
+        # Define as cores dinâmicas
         if conta['Status'] == 'Pago':
             bg_color, border_color = "#d4edda", "#198754"
+            btn_bg, btn_border = "#198754", "#198754"
+            selo = '<span style="background:#198754; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>'
         else:
             bg_color, border_color = "#f8d7da", "#dc3545"
+            btn_bg, btn_border = "#dc3545", "#dc3545"
+            selo = '<span style="background:#dc3545; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'
             
+        # Injeta o CSS específico para ESTE card e SEUS botões
         st.markdown(f"""
         <style>
         div[class*="st-key-card_{conta['ID_Unico']}"] {{
@@ -295,6 +337,14 @@ else:
             padding: 12px !important;
             margin-bottom: 10px !important;
         }}
+        /* Pinta todos os botões dentro deste card específico */
+        div[class*="st-key-card_{conta['ID_Unico']}"] div[class*="st-key-btn_row_"] button {{
+            background-color: {btn_bg} !important;
+            border-color: {btn_border} !important;
+        }}
+        div[class*="st-key-card_{conta['ID_Unico']}"] div[class*="st-key-btn_row_"] button * {{
+            color: white !important;
+        }}
         </style>
         """, unsafe_allow_html=True)
         
@@ -303,23 +353,20 @@ else:
             # Cabeçalho: Descrição e Valor
             st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'><div style='font-weight: 700; font-size: 16px; color: #000;'>{conta['Descricao']}</div><div style='font-weight: 700; font-size: 16px; color: #0d6efd;'>{valor_fmt}</div></div>", unsafe_allow_html=True)
             
-            # Monta o bloco Esquerdo (Vencimento, Pago em, Banco)
+            # Bloco Esquerdo (Vencimento, Pago em, Banco)
             bloco_esq = f"<div style='font-size: 12px; color: #000;'>📅 Vence: <b>{conta['Vencimento']}</b></div>"
-            
             if conta['Status'] == 'Pago' and conta.get('Data_Pagamento'):
                 bloco_esq += f"<div style='font-size: 12px; color: #000;'>💵 Pago em: <b>{conta['Data_Pagamento']}</b></div>"
                 if conta.get('Banco'):
                     bloco_esq += f"<div style='font-size: 12px; color: #000;'>🏦 Banco: <b>{conta['Banco']}</b></div>"
             
-            # Monta o bloco Direito (Status e Observação) EM UMA LINHA SÓ
-            selo = '<span style="background:#198754; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>' if conta['Status'] == 'Pago' else '<span style="background:#dc3545; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'
-            
+            # Bloco Direito (Status e Observação)
             bloco_dir = f"<div style='text-align: right;'><div style='font-size: 9px; color: #333; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px;'>STATUS</div><div>{selo}</div></div>"
             
+            # Observação com fonte preta e visível
             if conta.get('Observacao'):
-                bloco_dir += f"<div style='font-size: 11px; color: #444; text-align: right; margin-top: 6px; word-break: break-word;'>📝 {conta['Observacao']}</div>"
+                bloco_dir += f"<div style='font-size: 12px; color: #000; text-align: right; margin-top: 6px; word-break: break-word;'>📝 <b>{conta['Observacao']}</b></div>"
 
-            # Renderiza as duas colunas com espaçamento uniforme (gap: 6px), sem quebras de linha
             st.markdown(f"<div style='display: flex; justify-content: space-between;'><div style='display: flex; flex-direction: column; gap: 6px;'>{bloco_esq}</div><div style='display: flex; flex-direction: column; align-items: flex-end;'>{bloco_dir}</div></div>", unsafe_allow_html=True)
             
             st.write("")
