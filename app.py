@@ -13,7 +13,7 @@ st.markdown("""
     header {visibility: hidden;}
     .block-container { padding-top: 1rem; padding-left: 0.5rem; padding-right: 0.5rem; max-width: 600px; }
     
-    /* 1. Bordas dos inputs e Expander */
+    /* Bordas dos inputs e Expander */
     div[data-testid="stTextInput"] > div,
     div[data-testid="stTextInput"] div[data-baseweb="base-input"],
     div[data-testid="stTextInputRootElement"],
@@ -47,15 +47,15 @@ st.markdown("""
         overflow: hidden !important;
     }
 
-    /* 2. Cor do botão Sair */
+    /* Cor do botão Sair */
     div.st-key-btn_sair button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
     div.st-key-btn_sair button * { color: white !important; }
 
-    /* 3. Cabeçalho do Mês (Reduzido) */
+    /* Cabeçalho do Mês (Reduzido) */
     div[class*="st-key-nav_mes"] div[data-testid="stHorizontalBlock"] { 
         background-color: #e3f2fd !important; 
         border-radius: 10px !important;
-        padding: 3px 8px !important; /* Reduzido */
+        padding: 3px 8px !important;
         display: flex !important; 
         flex-direction: row !important;
         flex-wrap: nowrap !important; 
@@ -65,16 +65,16 @@ st.markdown("""
     div[class*="st-key-nav_mes"] div[data-testid="stColumn"] { padding: 0 !important; min-width: 0 !important; }
     div[class*="st-key-nav_mes"] button { 
         background-color: #0d6efd !important; border: 1px solid #0d6efd !important; 
-        height: 32px !important; /* Reduzido de 38 para 32 */
+        height: 32px !important;
         padding: 0 !important; width: 100% !important; font-size: 12px !important;
     }
     div[class*="st-key-nav_mes"] button * { color: white !important; }
     div[class*="st-key-nav_mes"] h4 {
         padding-top: 5px !important;
-        font-size: 15px !important; /* Fonte um pouco menor */
+        font-size: 15px !important;
     }
 
-    /* 4. Força a linha de botões (Pagar, Editar, Excluir) a ficar lado a lado e mais fina */
+    /* Força a linha de botões (Pagar, Editar, Excluir) a ficar lado a lado e mais fina */
     div[class*="st-key-btn_row_"] div[data-testid="stHorizontalBlock"] {
         display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px !important;
     }
@@ -83,13 +83,12 @@ st.markdown("""
     }
     div[class*="st-key-btn_row_"] button {
         font-size: 11px !important; 
-        height: 30px !important; /* Força altura fixa menor */
+        height: 30px !important;
         min-height: 30px !important;
         padding: 0 !important; 
         width: 100% !important;
         display: flex !important; align-items: center !important; justify-content: center !important;
     }
-    
     /* 🎯 Borda e Destaque no Checkbox */
     div[data-testid="stCheckbox"] {
         background-color: #f8f9fa !important;
@@ -128,7 +127,6 @@ def modal_pagar(conta_id, valor):
     st.write(f"Deseja confirmar o pagamento de **R$ {valor:.2f}**?")
     data_pag = st.date_input("Data do Pagamento", value=datetime.date.today(), format="DD/MM/YYYY")
     
-    # Checkbox para cadastrar novo banco na hora do pagamento
     novo_banco = st.checkbox("Cadastrar novo banco")
     
     if novo_banco:
@@ -186,10 +184,8 @@ def modal_editar(conta):
         data_venc_obj = datetime.datetime.strptime(conta['Vencimento'], "%d/%m/%Y").date()
         novo_venc = st.date_input("Vencimento", value=data_venc_obj, format="DD/MM/YYYY")
     
-    # Lógica inteligente do Banco
     banco_salvo = conta.get('Banco', '')
     
-    # Se o banco salvo existir, mas não estiver na lista padrão, já abre o checkbox preenchido
     if banco_salvo and banco_salvo not in BANCOS:
         novo_banco = st.checkbox("Cadastrar novo banco", value=True)
         banco_final = st.text_input("Digite o nome do banco", value=banco_salvo)
@@ -198,7 +194,6 @@ def modal_editar(conta):
         if novo_banco:
             banco_final = st.text_input("Digite o nome do banco")
         else:
-            # Se estiver vazio ou na lista, seleciona a opção correta
             idx_banco = BANCOS.index(banco_salvo) if banco_salvo in BANCOS else 0
             banco_final = st.selectbox("Banco utilizado", BANCOS, index=idx_banco)
         
@@ -245,6 +240,7 @@ if not st.session_state["logado"]:
     st.stop()
 
 # ---------------- TELA PRINCIPAL ----------------
+
 with st.expander("👤 Conta e Configurações", expanded=False):
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -310,83 +306,77 @@ if st.button("➕ Adicionar Nova Conta", type="primary", use_container_width=Tru
 
 st.write("")
 
-# --- LISTA DE CONTAS DO MÊS ---
-if not contas_do_mes:
-    st.info("Nenhuma conta cadastrada para este mês.")
-else:
-    for conta in contas_do_mes:
-        valor_fmt = fmt_moeda(float(conta['Valor']))
-        
-        # Define as cores dinâmicas
-        if conta['Status'] == 'Pago':
-            bg_color, border_color = "#d4edda", "#198754"
-            btn_bg, btn_border = "#198754", "#198754"
-            selo = '<span style="background:#198754; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>'
-        else:
-            bg_color, border_color = "#f8d7da", "#dc3545"
-            btn_bg, btn_border = "#dc3545", "#dc3545"
-            selo = '<span style="background:#dc3545; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'
+# ---------------- ÁREA DE ROLAGEM EXCLUSIVA DOS CARDS ----------------
+with st.container(height=500, border=False):
+    if not contas_do_mes:
+        st.info("Nenhuma conta cadastrada para este mês.")
+    else:
+        for conta in contas_do_mes:
+            valor_fmt = fmt_moeda(float(conta['Valor']))
             
-        # Injeta o CSS específico para ESTE card e SEUS botões
-        st.markdown(f"""
-        <style>
-        div[class*="st-key-card_{conta['ID_Unico']}"] {{
-            background-color: {bg_color} !important;
-            border: 1.5px solid {border_color} !important;
-            border-radius: 10px !important;
-            padding: 12px !important;
-            margin-bottom: 10px !important;
-        }}
-        /* Pinta todos os botões dentro deste card específico */
-        div[class*="st-key-card_{conta['ID_Unico']}"] div[class*="st-key-btn_row_"] button {{
-            background-color: {btn_bg} !important;
-            border-color: {btn_border} !important;
-        }}
-        div[class*="st-key-card_{conta['ID_Unico']}"] div[class*="st-key-btn_row_"] button * {{
-            color: white !important;
-        }}
-        </style>
-        """, unsafe_allow_html=True)
-        
-        with st.container(key=f"card_{conta['ID_Unico']}"):
-            
-            # Cabeçalho: Descrição e Valor
-            st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'><div style='font-weight: 700; font-size: 16px; color: #000;'>{conta['Descricao']}</div><div style='font-weight: 700; font-size: 16px; color: #0d6efd;'>{valor_fmt}</div></div>", unsafe_allow_html=True)
-            
-            # Bloco Esquerdo (Vencimento, Pago em, Banco)
-            bloco_esq = f"<div style='font-size: 12px; color: #000;'>📅 Vence: <b>{conta['Vencimento']}</b></div>"
-            if conta['Status'] == 'Pago' and conta.get('Data_Pagamento'):
-                bloco_esq += f"<div style='font-size: 12px; color: #000;'>💵 Pago em: <b>{conta['Data_Pagamento']}</b></div>"
-                if conta.get('Banco'):
-                    bloco_esq += f"<div style='font-size: 12px; color: #000;'>🏦 Banco: <b>{conta['Banco']}</b></div>"
-            
-            # Bloco Direito (Status e Observação)
-            bloco_dir = f"<div style='text-align: right;'><div style='font-size: 9px; color: #333; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px;'>STATUS</div><div>{selo}</div></div>"
-            
-            # Observação com fonte preta e visível
-            if conta.get('Observacao'):
-                bloco_dir += f"<div style='font-size: 12px; color: #000; text-align: right; margin-top: 6px; word-break: break-word;'>📝 <b>{conta['Observacao']}</b></div>"
-
-            st.markdown(f"<div style='display: flex; justify-content: space-between;'><div style='display: flex; flex-direction: column; gap: 6px;'>{bloco_esq}</div><div style='display: flex; flex-direction: column; align-items: flex-end;'>{bloco_dir}</div></div>", unsafe_allow_html=True)
-            
-            st.write("")
-            
-            with st.container(key=f"btn_row_{conta['ID_Unico']}"):
-                btn_col1, btn_col2, btn_col3 = st.columns(3)
+            if conta['Status'] == 'Pago':
+                bg_color, border_color = "#d4edda", "#198754"
+                btn_bg, btn_border = "#198754", "#198754"
+                selo = '<span style="background:#198754; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>'
+            else:
+                bg_color, border_color = "#f8d7da", "#dc3545"
+                btn_bg, btn_border = "#dc3545", "#dc3545"
+                selo = '<span style="background:#dc3545; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'
                 
-                with btn_col1:
-                    if conta['Status'] == 'Pendente':
-                        if st.button("✅ Pagar", key=f"btn_pagar_{conta['ID_Unico']}", use_container_width=True):
-                            modal_pagar(conta['ID_Unico'], float(conta['Valor']))
-                    else:
-                        if st.button("↩️ Desmarcar", key=f"btn_desmarcar_{conta['ID_Unico']}", use_container_width=True):
-                            if gs.atualizar_status_conta(conta['ID_Unico'], "Pendente", "", ""):
-                                st.rerun()
-                                
-                with btn_col2:
-                    if st.button("✏️ Editar", key=f"btn_edit_{conta['ID_Unico']}", use_container_width=True):
-                        modal_editar(conta)
-                        
-                with btn_col3:
-                    if st.button("🗑️ Excluir", key=f"btn_del_{conta['ID_Unico']}", use_container_width=True):
-                        modal_excluir(conta['ID_Unico'], conta['Descricao'])
+            st.markdown(f"""
+            <style>
+            div[class*="st-key-card_{conta['ID_Unico']}"] {{
+                background-color: {bg_color} !important;
+                border: 1.5px solid {border_color} !important;
+                border-radius: 10px !important;
+                padding: 12px !important;
+                margin-bottom: 10px !important;
+            }}
+            div[class*="st-key-card_{conta['ID_Unico']}"] div[class*="st-key-btn_row_"] button {{
+                background-color: {btn_bg} !important;
+                border-color: {btn_border} !important;
+            }}
+            div[class*="st-key-card_{conta['ID_Unico']}"] div[class*="st-key-btn_row_"] button * {{
+                color: white !important;
+            }}
+            </style>
+            """, unsafe_allow_html=True)
+            
+            with st.container(key=f"card_{conta['ID_Unico']}"):
+                
+                st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'><div style='font-weight: 700; font-size: 16px; color: #000;'>{conta['Descricao']}</div><div style='font-weight: 700; font-size: 16px; color: #0d6efd;'>{valor_fmt}</div></div>", unsafe_allow_html=True)
+                
+                bloco_esq = f"<div style='font-size: 12px; color: #000;'>📅 Vence: <b>{conta['Vencimento']}</b></div>"
+                if conta['Status'] == 'Pago' and conta.get('Data_Pagamento'):
+                    bloco_esq += f"<div style='font-size: 12px; color: #000;'>💵 Pago em: <b>{conta['Data_Pagamento']}</b></div>"
+                    if conta.get('Banco'):
+                        bloco_esq += f"<div style='font-size: 12px; color: #000;'>🏦 Banco: <b>{conta['Banco']}</b></div>"
+                
+                bloco_dir = f"<div style='text-align: right;'><div style='font-size: 9px; color: #333; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px;'>STATUS</div><div>{selo}</div></div>"
+                
+                if conta.get('Observacao'):
+                    bloco_dir += f"<div style='font-size: 12px; color: #000; text-align: right; margin-top: 6px; word-break: break-word;'>📝 <b>{conta['Observacao']}</b></div>"
+
+                st.markdown(f"<div style='display: flex; justify-content: space-between;'><div style='display: flex; flex-direction: column; gap: 6px;'>{bloco_esq}</div><div style='display: flex; flex-direction: column; align-items: flex-end;'>{bloco_dir}</div></div>", unsafe_allow_html=True)
+                
+                st.write("")
+                
+                with st.container(key=f"btn_row_{conta['ID_Unico']}"):
+                    btn_col1, btn_col2, btn_col3 = st.columns(3)
+                    
+                    with btn_col1:
+                        if conta['Status'] == 'Pendente':
+                            if st.button("✅ Pagar", key=f"btn_pagar_{conta['ID_Unico']}", use_container_width=True):
+                                modal_pagar(conta['ID_Unico'], float(conta['Valor']))
+                        else:
+                            if st.button("↩️ Desmarcar", key=f"btn_desmarcar_{conta['ID_Unico']}", use_container_width=True):
+                                if gs.atualizar_status_conta(conta['ID_Unico'], "Pendente", "", ""):
+                                    st.rerun()
+                                    
+                    with btn_col2:
+                        if st.button("✏️ Editar", key=f"btn_edit_{conta['ID_Unico']}", use_container_width=True):
+                            modal_editar(conta)
+                            
+                    with btn_col3:
+                        if st.button("🗑️ Excluir", key=f"btn_del_{conta['ID_Unico']}", use_container_width=True):
+                            modal_excluir(conta['ID_Unico'], conta['Descricao'])
