@@ -13,12 +13,13 @@ st.markdown("""
     header {visibility: hidden;}
     .block-container { padding-top: 1rem; padding-left: 0.5rem; padding-right: 0.5rem; max-width: 600px; }
     
-    /* 1. Bordas dos inputs */
+    /* 1. Bordas dos inputs e Expander */
     div[data-testid="stTextInput"] > div,
     div[data-testid="stTextInput"] div[data-baseweb="base-input"],
     div[data-testid="stTextInputRootElement"],
     div[data-testid="stDateInput"] > div,
-    div[data-testid="stSelectbox"] > div {
+    div[data-testid="stSelectbox"] > div,
+    div[data-testid="stNumberInput"] > div {
         background-color: #ffffff !important;
         border: 1.2px solid #0d6efd !important;
         border-radius: 8px !important;
@@ -28,21 +29,29 @@ st.markdown("""
     div[data-testid="stTextInput"] div[data-baseweb="base-input"]:focus-within,
     div[data-testid="stTextInputRootElement"]:focus-within,
     div[data-testid="stDateInput"] > div:focus-within,
-    div[data-testid="stSelectbox"] > div:focus-within {
+    div[data-testid="stSelectbox"] > div:focus-within,
+    div[data-testid="stNumberInput"] > div:focus-within {
         border-color: #198754 !important;
         box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.15) !important;
     }
-    div[data-testid="stTextInput"] input, div[data-testid="stDateInput"] input {
+    div[data-testid="stTextInput"] input, div[data-testid="stDateInput"] input, div[data-testid="stNumberInput"] input {
         background-color: #ffffff !important;
         border: none !important;
         box-shadow: none !important;
+    }
+
+    /* Borda do Expander */
+    div[data-testid="stExpander"] {
+        border: 1.2px solid #0d6efd !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
     }
 
     /* 2. Cor do botão Sair */
     div.st-key-btn_sair button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
     div.st-key-btn_sair button * { color: white !important; }
 
-    /* 3. Cabeçalho do Mês (CORRIGIDO) */
+    /* 3. Cabeçalho do Mês */
     div[class*="st-key-nav_mes"] div[data-testid="stHorizontalBlock"] { 
         background-color: #e3f2fd !important; 
         border-radius: 10px !important;
@@ -51,24 +60,14 @@ st.markdown("""
         flex-direction: row !important;
         flex-wrap: nowrap !important; 
         align-items: center !important;
+        justify-content: space-between !important;
     }
-    /* Removida a regra que forçava todas as colunas a terem o mesmo tamanho */
-    div[class*="st-key-nav_mes"] div[data-testid="stColumn"] { 
-        padding: 0 !important; 
-        min-width: 0 !important;
-    }
+    div[class*="st-key-nav_mes"] div[data-testid="stColumn"] { padding: 0 !important; min-width: 0 !important; }
     div[class*="st-key-nav_mes"] button { 
         background-color: #0d6efd !important; border: 1px solid #0d6efd !important; 
-        height: 38px !important; padding: 0 !important; width: 100% !important;
+        height: 38px !important; padding: 0 !important; width: 100% !important; font-size: 12px !important;
     }
     div[class*="st-key-nav_mes"] button * { color: white !important; }
-    
-    /* Força o texto do mês a nunca quebrar de linha */
-    div[class*="st-key-nav_mes"] h4 {
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
 
     /* 4. Força a linha de botões (Pagar, Editar, Excluir) a ficar lado a lado */
     div[class*="st-key-btn_row_"] div[data-testid="stHorizontalBlock"] {
@@ -81,15 +80,20 @@ st.markdown("""
         font-size: 11px !important; padding: 0.2rem 0 !important; width: 100% !important;
     }
 
-    /* 5. Cores dos Botões de Ação */
-    div[class*="st-key-btn_pagar_"] button { background-color: #198754 !important; border-color: #198754 !important; }
-    div[class*="st-key-btn_pagar_"] button * { color: white !important; }
-    div[class*="st-key-btn_desmarcar_"] button { background-color: #fd7e14 !important; border-color: #fd7e14 !important; }
-    div[class*="st-key-btn_desmarcar_"] button * { color: white !important; }
-    div[class*="st-key-btn_edit_"] button { background-color: #0d6efd !important; border-color: #0d6efd !important; }
-    div[class*="st-key-btn_edit_"] button * { color: white !important; }
-    div[class*="st-key-btn_del_"] button { background-color: #dc3545 !important; border-color: #dc3545 !important; }
-    div[class*="st-key-btn_del_"] button * { color: white !important; }
+    /* 5. TODOS OS BOTÕES DE AÇÃO AZUIS */
+    div[class*="st-key-btn_pagar_"] button, 
+    div[class*="st-key-btn_desmarcar_"] button,
+    div[class*="st-key-btn_edit_"] button, 
+    div[class*="st-key-btn_del_"] button {
+        background-color: #0d6efd !important; 
+        border: 1px solid #0d6efd !important;
+    }
+    div[class*="st-key-btn_pagar_"] button *,
+    div[class*="st-key-btn_desmarcar_"] button *,
+    div[class*="st-key-btn_edit_"] button *, 
+    div[class*="st-key-btn_del_"] button * { 
+        color: white !important; 
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -98,62 +102,76 @@ if "logado" not in st.session_state: st.session_state["logado"] = False
 if "usuario" not in st.session_state: st.session_state["usuario"] = ""
 if "mes_atual" not in st.session_state: st.session_state["mes_atual"] = datetime.date.today().replace(day=1)
 
+BANCOS = ["Nubank", "Itaú", "Caixa", "Bradesco", "Santander", "PicPay", "Inter", "C6 Bank", "Banco do Brasil", "Outro"]
+
 # ---------------- MODAIS ----------------
 @st.dialog("Confirmar Pagamento")
 def modal_pagar(conta_id, valor):
     st.write(f"Deseja confirmar o pagamento de **R$ {valor:.2f}**?")
     data_pag = st.date_input("Data do Pagamento", value=datetime.date.today(), format="DD/MM/YYYY")
+    banco_pag = st.selectbox("Banco utilizado", BANCOS)
+    
     if st.button("Confirmar e Pagar", type="primary", use_container_width=True):
-        if gs.atualizar_status_conta(conta_id, "Pago", data_pag.strftime("%d/%m/%Y")):
+        if gs.atualizar_status_conta(conta_id, "Pago", data_pag.strftime("%d/%m/%Y"), banco_pag):
             st.rerun()
 
 @st.dialog("Adicionar Nova Conta")
 def modal_adicionar():
     sugestoes = gs.obter_descricoes_usuario(st.session_state["usuario"])
-    opcoes = ["Nova Conta..."] + sugestoes
     
-    with st.form("form_nova_conta", clear_on_submit=True):
-        desc_escolhida = st.selectbox("Selecione uma conta", opcoes)
+    nova_conta = st.checkbox("Cadastrar nova conta")
+    
+    if nova_conta:
+        desc = st.text_input("Digite o nome da nova conta")
+    else:
+        if not sugestoes:
+            st.warning("Nenhuma conta cadastrada. Marque a caixa acima para criar a primeira.")
+            desc = ""
+        else:
+            desc = st.selectbox("Selecione uma conta", sugestoes)
+    
+    col_val, col_venc = st.columns(2)
+    with col_val:
+        val_input = st.number_input("Valor (R$)", min_value=0.0, format="%.2f", value=None, placeholder="0,00")
+    with col_venc:
+        proximo_mes = st.session_state["mes_atual"] + relativedelta(months=1)
+        ultimo_dia = proximo_mes - datetime.timedelta(days=1)
+        venc = st.date_input("Vencimento", value=ultimo_dia, format="DD/MM/YYYY")
         
-        desc = desc_escolhida
-        if desc_escolhida == "Nova Conta...":
-            desc = st.text_input("Cadastre uma nova conta (Ex: Internet, Aluguel)")
-        
-        col_val, col_venc = st.columns(2)
-        with col_val:
-            val = st.number_input("Valor (R$)", min_value=0.0, format="%.2f")
-        with col_venc:
-            proximo_mes = st.session_state["mes_atual"] + relativedelta(months=1)
-            ultimo_dia = proximo_mes - datetime.timedelta(days=1)
-            venc = st.date_input("Vencimento", value=ultimo_dia, format="DD/MM/YYYY")
-            
-        obs = st.text_input("Observação (Opcional)")
-        mes_busca = st.session_state["mes_atual"].strftime("%Y-%m")
-        
-        if st.form_submit_button("Salvar Conta", type="primary", use_container_width=True):
-            if not desc or desc == "Nova Conta..." or val < 0:
-                st.error("Preencha a descrição corretamente.")
-            else:
-                if gs.salvar_conta(st.session_state["usuario"], mes_busca, desc, val, venc.strftime("%d/%m/%Y"), obs):
-                    st.rerun()
+    obs = st.text_input("Observação (Opcional)")
+    mes_busca = st.session_state["mes_atual"].strftime("%Y-%m")
+    
+    if st.button("Salvar Conta", type="primary", use_container_width=True):
+        val_final = val_input if val_input is not None else 0.0
+        if not desc:
+            st.error("Por favor, preencha ou selecione uma conta.")
+        else:
+            if gs.salvar_conta(st.session_state["usuario"], mes_busca, desc, val_final, venc.strftime("%d/%m/%Y"), obs):
+                st.rerun()
 
 @st.dialog("Editar Conta")
 def modal_editar(conta):
-    with st.form("form_editar_conta"):
-        st.markdown(f"**Editando:** {conta['Descricao']}")
+    st.markdown(f"**Editando:** {conta['Descricao']}")
+    
+    col_val, col_venc = st.columns(2)
+    with col_val:
+        val_atual = float(conta['Valor'])
+        val_input = st.number_input("Valor (R$)", min_value=0.0, value=val_atual if val_atual > 0 else None, format="%.2f", placeholder="0,00")
+    with col_venc:
+        data_venc_obj = datetime.datetime.strptime(conta['Vencimento'], "%d/%m/%Y").date()
+        novo_venc = st.date_input("Vencimento", value=data_venc_obj, format="DD/MM/YYYY")
+    
+    banco_atual = conta.get('Banco', '')
+    if banco_atual not in BANCOS: 
+        banco_atual = "Nubank"
+    novo_banco = st.selectbox("Banco utilizado", BANCOS, index=BANCOS.index(banco_atual))
         
-        col_val, col_venc = st.columns(2)
-        with col_val:
-            novo_val = st.number_input("Valor (R$)", min_value=0.0, value=float(conta['Valor']), format="%.2f")
-        with col_venc:
-            data_venc_obj = datetime.datetime.strptime(conta['Vencimento'], "%d/%m/%Y").date()
-            novo_venc = st.date_input("Vencimento", value=data_venc_obj, format="DD/MM/YYYY")
-            
-        nova_obs = st.text_input("Observação", value=conta.get('Observacao', ''))
-        
-        if st.form_submit_button("Salvar Alterações", type="primary", use_container_width=True):
-            if gs.editar_conta(conta['ID_Unico'], conta['Descricao'], novo_val, novo_venc.strftime("%d/%m/%Y"), nova_obs):
-                st.rerun()
+    nova_obs = st.text_input("Observação", value=conta.get('Observacao', ''))
+    
+    if st.button("Salvar Alterações", type="primary", use_container_width=True):
+        val_final = val_input if val_input is not None else 0.0
+        if gs.editar_conta(conta['ID_Unico'], conta['Descricao'], val_final, novo_venc.strftime("%d/%m/%Y"), nova_obs, novo_banco):
+            st.rerun()
 
 @st.dialog("Excluir Conta")
 def modal_excluir(conta_id, descricao):
@@ -165,7 +183,7 @@ def modal_excluir(conta_id, descricao):
 # ---------------- TELA DE LOGIN ----------------
 if not st.session_state["logado"]:
     st.markdown("<h2 style='text-align: center;'>💰 Contas a Pagar</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>Acesse sua conta para gerenciar suas finanças</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Acesse sua conta</p>", unsafe_allow_html=True)
     
     tab_login, tab_cadastro = st.tabs(["🔒 Login", "📝 Criar Conta"])
     
@@ -179,7 +197,6 @@ if not st.session_state["logado"]:
                 st.rerun()
             else:
                 st.error("E-mail ou senha incorretos.")
-                
     with tab_cadastro:
         cad_email = st.text_input("E-mail", key="cad_email")
         cad_senha = st.text_input("Senha", type="password", key="cad_senha")
@@ -187,7 +204,7 @@ if not st.session_state["logado"]:
         if st.button("Cadastrar", type="primary", use_container_width=True):
             if not cad_email or not cad_senha: st.warning("Preencha tudo.")
             elif cad_senha != cad_senha2: st.error("Senhas não coincidem.")
-            elif gs.cadastrar_usuario(cad_email, cad_senha): st.success("Conta criada! Faça o login.")
+            elif gs.cadastrar_usuario(cad_email, cad_senha): st.success("Conta criada!")
             else: st.error("E-mail já cadastrado.")
     st.stop()
 
@@ -202,21 +219,24 @@ with st.expander("👤 Conta e Configurações", expanded=False):
             st.session_state["usuario"] = ""
             st.rerun()
 
-# Cabeçalho do Mês (Proporção ajustada para [1, 4, 1] para dar mais espaço ao texto)
+# Cabeçalho do Mês
 with st.container(key="nav_mes"):
-    col_prev, col_titulo, col_next = st.columns([1, 4, 1])
+    col_prev, col_titulo, col_next = st.columns([1, 2, 1])
+    
     with col_prev:
-        if st.button("◀", key="btn_prev"):
+        if st.button("◀ Anterior", key="btn_prev", use_container_width=True):
             st.session_state["mes_atual"] -= relativedelta(months=1)
             st.rerun()
+            
     with col_titulo:
         nome_mes = st.session_state["mes_atual"].strftime("%B/%Y").capitalize()
         meses_pt = {"January": "Janeiro", "February": "Fevereiro", "March": "Março", "April": "Abril", "May": "Maio", "June": "Junho", "July": "Julho", "August": "Agosto", "September": "Setembro", "October": "Outubro", "November": "Novembro", "December": "Dezembro"}
         for en, pt in meses_pt.items():
             if en in nome_mes: nome_mes = nome_mes.replace(en, pt)
         st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 16px; color: #0d6efd; font-weight: bold; padding-top: 8px;'>{nome_mes}</h4>", unsafe_allow_html=True)
+            
     with col_next:
-        if st.button("▶", key="btn_next"):
+        if st.button("Próximo ▶", key="btn_next", use_container_width=True):
             st.session_state["mes_atual"] += relativedelta(months=1)
             st.rerun()
 
@@ -262,15 +282,15 @@ else:
         valor_fmt = fmt_moeda(float(conta['Valor']))
         
         if conta['Status'] == 'Pago':
-            bg_color, border_color = "#d4edda", "#c3e6cb"
+            bg_color, border_color = "#d4edda", "#198754"
         else:
-            bg_color, border_color = "#f8d7da", "#f5c6cb"
+            bg_color, border_color = "#f8d7da", "#dc3545"
             
         st.markdown(f"""
         <style>
         div[class*="st-key-card_{conta['ID_Unico']}"] {{
             background-color: {bg_color} !important;
-            border: 1px solid {border_color} !important;
+            border: 1.5px solid {border_color} !important;
             border-radius: 10px !important;
             padding: 12px !important;
             margin-bottom: 10px !important;
@@ -280,34 +300,30 @@ else:
         
         with st.container(key=f"card_{conta['ID_Unico']}"):
             
-            st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div style="font-weight: 700; font-size: 16px; color: #333;">{conta['Descricao']}</div>
-                <div style="font-weight: 700; font-size: 16px; color: #0d6efd;">{valor_fmt}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            # Cabeçalho: Descrição e Valor
+            st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'><div style='font-weight: 700; font-size: 16px; color: #000;'>{conta['Descricao']}</div><div style='font-weight: 700; font-size: 16px; color: #0d6efd;'>{valor_fmt}</div></div>", unsafe_allow_html=True)
             
-            st.markdown(f"""
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 5px;">
-                <div style="font-size: 12px; color: #6c757d; margin-bottom: 2px;">📅 Vence: {conta['Vencimento']}</div>
-                <div style="text-align: right;">
-                    <div style="font-size: 9px; color: #adb5bd; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px;">STATUS</div>
-                    <div>
-                        {'<span style="background:#155724; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>' if conta['Status'] == 'Pago' else '<span style="background:#856404; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'}
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            # Monta o bloco Esquerdo (Vencimento, Pago em, Banco)
+            bloco_esq = f"<div style='font-size: 12px; color: #000;'>📅 Vence: <b>{conta['Vencimento']}</b></div>"
             
             if conta['Status'] == 'Pago' and conta.get('Data_Pagamento'):
-                 st.markdown(f"<div style='font-size: 12px; color: #6c757d; margin-top: 8px;'>💵 Pago em: {conta['Data_Pagamento']}</div>", unsafe_allow_html=True)
+                bloco_esq += f"<div style='font-size: 12px; color: #000;'>💵 Pago em: <b>{conta['Data_Pagamento']}</b></div>"
+                if conta.get('Banco'):
+                    bloco_esq += f"<div style='font-size: 12px; color: #000;'>🏦 Banco: <b>{conta['Banco']}</b></div>"
+            
+            # Monta o bloco Direito (Status e Observação) EM UMA LINHA SÓ
+            selo = '<span style="background:#198754; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>' if conta['Status'] == 'Pago' else '<span style="background:#dc3545; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'
+            
+            bloco_dir = f"<div style='text-align: right;'><div style='font-size: 9px; color: #333; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px;'>STATUS</div><div>{selo}</div></div>"
             
             if conta.get('Observacao'):
-                st.markdown(f"<div style='font-size: 12px; color: #6c757d; margin-top: 5px;'>📝 {conta['Observacao']}</div>", unsafe_allow_html=True)
+                bloco_dir += f"<div style='font-size: 11px; color: #444; text-align: right; margin-top: 6px; word-break: break-word;'>📝 {conta['Observacao']}</div>"
+
+            # Renderiza as duas colunas com espaçamento uniforme (gap: 6px), sem quebras de linha
+            st.markdown(f"<div style='display: flex; justify-content: space-between;'><div style='display: flex; flex-direction: column; gap: 6px;'>{bloco_esq}</div><div style='display: flex; flex-direction: column; align-items: flex-end;'>{bloco_dir}</div></div>", unsafe_allow_html=True)
             
             st.write("")
             
-            # --- BOTÕES LADO A LADO COM FORÇA BRUTA ---
             with st.container(key=f"btn_row_{conta['ID_Unico']}"):
                 btn_col1, btn_col2, btn_col3 = st.columns(3)
                 
@@ -317,7 +333,7 @@ else:
                             modal_pagar(conta['ID_Unico'], float(conta['Valor']))
                     else:
                         if st.button("↩️ Desmarcar", key=f"btn_desmarcar_{conta['ID_Unico']}", use_container_width=True):
-                            if gs.atualizar_status_conta(conta['ID_Unico'], "Pendente", ""):
+                            if gs.atualizar_status_conta(conta['ID_Unico'], "Pendente", "", ""):
                                 st.rerun()
                                 
                 with btn_col2:

@@ -4,7 +4,7 @@ from google.oauth2.service_account import Credentials
 import hashlib
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-SPREADSHEET_ID = "1x6v-gZnPsgBGhgkpf82qYG-9tnA9qirG-mQDbyaNMZs" # ID da sua planilha
+SPREADSHEET_ID = "1x6v-gZnPsgBGhgkpf82qYG-9tnA9qirG-mQDbyaNMZs"
 USUARIOS_WORKSHEET = "Usuarios"
 
 _usuarios_worksheet_cache = None
@@ -75,10 +75,14 @@ def _get_contas_ws():
         planilha = client.open_by_key(SPREADSHEET_ID)
         try:
             _contas_worksheet_cache = planilha.worksheet(CONTAS_WORKSHEET)
+            # Verifica se a coluna Banco (10) existe. Se não, adiciona.
+            headers = _contas_worksheet_cache.row_values(1)
+            if len(headers) < 10 or "Banco" not in headers:
+                _contas_worksheet_cache.resize(cols=10)
+                _contas_worksheet_cache.update_cell(1, 10, "Banco")
         except gspread.exceptions.WorksheetNotFound:
-            ws = planilha.add_worksheet(title=CONTAS_WORKSHEET, rows="1000", cols="9")
-            # Cria o cabeçalho da tabela
-            ws.append_row(["ID_Unico", "Email", "Mes_Ref", "Descricao", "Valor", "Vencimento", "Status", "Data_Pagamento", "Observacao"])
+            ws = planilha.add_worksheet(title=CONTAS_WORKSHEET, rows="1000", cols="10")
+            ws.append_row(["ID_Unico", "Email", "Mes_Ref", "Descricao", "Valor", "Vencimento", "Status", "Data_Pagamento", "Observacao", "Banco"])
             _contas_worksheet_cache = ws
     return _contas_worksheet_cache
 
@@ -87,8 +91,8 @@ def salvar_conta(email, mes_ref, descricao, valor, vencimento, observacao=""):
         import uuid
         ws = _get_contas_ws()
         id_unico = str(uuid.uuid4())
-        # Formato do mês: YYYY-MM (ex: 2026-11)
-        ws.append_row([id_unico, email.lower(), mes_ref, descricao, float(valor), vencimento, "Pendente", "", observacao])
+        # Adiciona linha com 10 colunas (a última vazia para o banco)
+        ws.append_row([id_unico, email.lower(), mes_ref, descricao, float(valor), vencimento, "Pendente", "", observacao, ""])
         return True
     except Exception as e:
         print(f"Erro ao salvar conta: {e}")
@@ -107,13 +111,14 @@ def carregar_contas(email, mes_ref):
         print(f"Erro ao carregar contas: {e}")
         return []
 
-def atualizar_status_conta(id_unico, novo_status, data_pagamento=""):
+def atualizar_status_conta(id_unico, novo_status, data_pagamento="", banco=""):
     try:
         ws = _get_contas_ws()
         cell = ws.find(id_unico)
         if cell:
             ws.update_cell(cell.row, 7, novo_status) # Coluna 7: Status
             ws.update_cell(cell.row, 8, data_pagamento) # Coluna 8: Data_Pagamento
+            ws.update_cell(cell.row, 10, banco) # Coluna 10: Banco
             return True
         return False
     except Exception as e:
@@ -129,14 +134,13 @@ def obter_descricoes_usuario(email):
             if str(reg.get("Email", "")).lower() == email.lower():
                 desc = str(reg.get("Descricao", "")).strip()
                 if desc:
-                    # Deixa a primeira letra maiúscula para ficar bonito (ex: Internet)
                     descricoes.add(desc.capitalize())
         return sorted(list(descricoes))
     except Exception as e:
         print(f"Erro ao buscar descrições: {e}")
         return []
 
-def editar_conta(id_unico, descricao, valor, vencimento, observacao):
+def editar_conta(id_unico, descricao, valor, vencimento, observacao, banco=""):
     try:
         ws = _get_contas_ws()
         cell = ws.find(id_unico)
@@ -145,6 +149,7 @@ def editar_conta(id_unico, descricao, valor, vencimento, observacao):
             ws.update_cell(cell.row, 5, float(valor)) # Coluna 5: Valor
             ws.update_cell(cell.row, 6, vencimento)  # Coluna 6: Vencimento
             ws.update_cell(cell.row, 9, observacao)  # Coluna 9: Observação
+            ws.update_cell(cell.row, 10, banco)      # Coluna 10: Banco
             return True
         return False
     except Exception as e:
