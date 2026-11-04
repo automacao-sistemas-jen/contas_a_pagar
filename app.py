@@ -41,54 +41,38 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* Top Icons */
+    /* Barra de Ícones */
     div[class*="st-key-nav_icons"] div[data-testid="stHorizontalBlock"] {
-        display: flex !important; gap: 8px !important; margin-bottom: 10px !important;
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 8px !important; margin-bottom: 10px !important;
+    }
+    div[class*="st-key-nav_icons"] div[data-testid="stColumn"] {
+        flex: 1 1 0% !important; min-width: 0 !important; padding: 0 !important;
     }
     div[class*="st-key-nav_icons"] button {
-        background-color: #f8f9fa !important;
-        color: #0d6efd !important;
-        border: 1.2px solid #0d6efd !important;
-        border-radius: 8px !important;
-        height: 45px !important;
-        padding: 0 !important;
-        font-size: 20px !important;
+        background-color: #f8f9fa !important; color: #0d6efd !important;
+        border: 1.2px solid #0d6efd !important; border-radius: 8px !important;
+        height: 42px !important; padding: 0 !important; font-size: 18px !important;
     }
-    div[class*="st-key-nav_icons"] button * {
-        color: #0d6efd !important;
-    }
-    div[class*="st-key-nav_icons"] div[class*="st-key-btn_add"] button {
-        background-color: #198754 !important;
-        border-color: #198754 !important;
-    }
-    div[class*="st-key-nav_icons"] div[class*="st-key-btn_add"] button * {
-        color: white !important;
-    }
+    div[class*="st-key-nav_icons"] button * { color: #0d6efd !important; }
+    div[class*="st-key-nav_icons"] div[class*="st-key-btn_add"] button { background-color: #198754 !important; border-color: #198754 !important; }
+    div[class*="st-key-nav_icons"] div[class*="st-key-btn_add"] button * { color: white !important; }
 
-    /* Month Nav */
+    /* Navegação do Mês */
     div[class*="st-key-nav_mes"] div[data-testid="stHorizontalBlock"] { 
-        background-color: #e3f2fd !important; 
-        border-radius: 10px !important;
-        padding: 3px 8px !important;
-        display: flex !important; 
-        flex-direction: row !important;
-        flex-wrap: nowrap !important; 
-        align-items: center !important;
-        justify-content: space-between !important;
+        background-color: #e3f2fd !important; border-radius: 10px !important;
+        padding: 2px 6px !important; display: flex !important; flex-direction: row !important;
+        flex-wrap: nowrap !important; align-items: center !important; justify-content: space-between !important;
     }
     div[class*="st-key-nav_mes"] div[data-testid="stColumn"] { padding: 0 !important; min-width: 0 !important; }
     div[class*="st-key-nav_mes"] button { 
         background-color: #0d6efd !important; border: 1px solid #0d6efd !important; 
-        height: 32px !important;
+        height: 30px !important; min-height: 30px !important;
         padding: 0 !important; width: 100% !important; font-size: 12px !important;
     }
     div[class*="st-key-nav_mes"] button * { color: white !important; }
-    div[class*="st-key-nav_mes"] h4 {
-        padding-top: 5px !important;
-        font-size: 15px !important;
-    }
+    div[class*="st-key-nav_mes"] h4 { padding-top: 5px !important; font-size: 14px !important; }
 
-    /* Action Buttons in Cards */
+    /* Botões de Ação nos Cards */
     div[class*="st-key-btn_row_"] div[data-testid="stHorizontalBlock"] {
         display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px !important;
     }
@@ -96,36 +80,38 @@ st.markdown("""
         flex: 1 1 0% !important; min-width: 0 !important; padding: 0 !important;
     }
     div[class*="st-key-btn_row_"] button {
-        font-size: 11px !important; 
-        height: 32px !important;
-        min-height: 32px !important;
-        padding: 0 !important; 
-        width: 100% !important;
+        font-size: 11px !important; height: 30px !important; min-height: 30px !important;
+        padding: 0 !important; width: 100% !important;
         display: flex !important; align-items: center !important; justify-content: center !important;
     }
 
     /* Checkbox */
     div[data-testid="stCheckbox"] {
-        background-color: #f8f9fa !important;
-        padding: 8px 12px !important;
-        border-radius: 8px !important;
-        border: 1.2px solid #0d6efd !important;
-        margin-bottom: 12px !important;
+        background-color: #f8f9fa !important; padding: 8px 12px !important;
+        border-radius: 8px !important; border: 1.2px solid #0d6efd !important; margin-bottom: 12px !important;
     }
     div[data-testid="stCheckbox"] div[data-baseweb="checkbox"] > div:first-child {
-        border: 2px solid #0d6efd !important;
-        border-radius: 4px !important;
-        background-color: #ffffff !important;
+        border: 2px solid #0d6efd !important; border-radius: 4px !important; background-color: #ffffff !important;
     }
-    div[data-testid="stCheckbox"] p {
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        color: #0d6efd !important;
-    }
+    div[data-testid="stCheckbox"] p { font-size: 15px !important; font-weight: 600 !important; color: #0d6efd !important; }
 
     /* Botões de Sair e Limpar */
     div[class*="st-key-btn_sair"] button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
     div[class*="st-key-btn_sair"] button * { color: white !important; }
+    div[class*="st-key-btn_limpar"] button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
+    div[class*="st-key-btn_limpar"] button * { color: white !important; }
+
+    /* Calendário Customizado nos Filtros */
+    div[class*="st-key-date_nav_"] div[data-testid="stHorizontalBlock"] {
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 2px !important;
+        align-items: center !important; justify-content: center !important;
+    }
+    div[class*="st-key-date_nav_"] div[data-testid="stColumn"] { padding: 0 !important; min-width: 0 !important; }
+    div[class*="st-key-date_nav_"] button {
+        background-color: transparent !important; border: none !important; color: #0d6efd !important; 
+        font-size: 18px !important; height: 20px !important; padding: 0 !important;
+    }
+    div[class*="st-key-date_nav_"] button:hover { background-color: #e3f2fd !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -134,6 +120,9 @@ if "logado" not in st.session_state: st.session_state["logado"] = False
 if "usuario" not in st.session_state: st.session_state["usuario"] = ""
 if "mes_atual" not in st.session_state: st.session_state["mes_atual"] = datetime.date.today().replace(day=1)
 if "filtro_ativo" not in st.session_state: st.session_state["filtro_ativo"] = False
+if "modal_filtro_aberto" not in st.session_state: st.session_state["modal_filtro_aberto"] = False
+if "date_ini" not in st.session_state: st.session_state["date_ini"] = datetime.date.today()
+if "date_fim" not in st.session_state: st.session_state["date_fim"] = datetime.date.today()
 
 BANCOS = ["", "Banco do Brasil", "Bradesco", "C6 Bank", "Caixa", "Dinheiro", "Inter", "Itaú", "Nubank", "PicPay", "Santander", "Sicredi"]
 
@@ -233,52 +222,58 @@ def modal_configuracoes():
 
 @st.dialog("🔍 Filtros Avançados")
 def modal_filtros():
-    with st.form("form_filtros"):
-        sugestoes = gs.obter_descricoes_usuario(st.session_state["usuario"])
+    sugestoes = gs.obter_descricoes_usuario(st.session_state["usuario"])
+    idx_desc = 0
+    if st.session_state.get("f_desc") in sugestoes:
+        idx_desc = sugestoes.index(st.session_state["f_desc"]) + 1
+    f_desc = st.selectbox("Descrição", [""] + sugestoes, index=idx_desc)
+    
+    st.markdown("**Data Inicial**")
+    if "date_ini" not in st.session_state:
+        st.session_state["date_ini"] = datetime.date.today()
+    f_data_ini = st.date_input("Selecione a data", format="DD/MM/YYYY", key="date_ini", label_visibility="collapsed")
+    
+    st.markdown("**Data Final**")
+    if "date_fim" not in st.session_state:
+        st.session_state["date_fim"] = datetime.date.today()
+    f_data_fim = st.date_input("Selecione a data", format="DD/MM/YYYY", key="date_fim", label_visibility="collapsed")
         
-        idx_desc = 0
-        if st.session_state.get("f_desc") in sugestoes:
-            idx_desc = sugestoes.index(st.session_state["f_desc"]) + 1
-            
-        f_desc = st.selectbox("Descrição", [""] + sugestoes, index=idx_desc)
+    col_f3, col_f4 = st.columns(2)
+    with col_f3:
+        idx_banco = 0
+        if st.session_state.get("f_banco") in BANCOS:
+            idx_banco = BANCOS.index(st.session_state["f_banco"])
+        f_banco = st.selectbox("Banco", ["Todos"] + BANCOS[1:], index=idx_banco if st.session_state.get("f_banco") else 0)
+    with col_f4:
+        idx_status = 0
+        if st.session_state.get("f_status") in ["Todos", "Pago", "Pendente"]:
+            idx_status = ["Todos", "Pago", "Pendente"].index(st.session_state["f_status"])
+        f_status = st.selectbox("Status", ["Todos", "Pago", "Pendente"], index=idx_status)
         
-        col_f1, col_f2 = st.columns(2)
-        with col_f1:
-            f_data_ini = st.date_input("Data Inicial", value=st.session_state.get("f_data_ini"), format="DD/MM/YYYY")
-        with col_f2:
-            f_data_fim = st.date_input("Data Final", value=st.session_state.get("f_data_fim"), format="DD/MM/YYYY")
-            
-        col_f3, col_f4 = st.columns(2)
-        with col_f3:
-            idx_banco = 0
-            if st.session_state.get("f_banco") in BANCOS:
-                idx_banco = BANCOS.index(st.session_state["f_banco"])
-            f_banco = st.selectbox("Banco", ["Todos"] + BANCOS[1:], index=idx_banco if st.session_state.get("f_banco") else 0)
-        with col_f4:
-            idx_status = 0
-            if st.session_state.get("f_status") in ["Todos", "Pago", "Pendente"]:
-                idx_status = ["Todos", "Pago", "Pendente"].index(st.session_state["f_status"])
-            f_status = st.selectbox("Status", ["Todos", "Pago", "Pendente"], index=idx_status)
-            
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            if st.form_submit_button("Aplicar Filtros", type="primary", use_container_width=True):
-                st.session_state["filtro_ativo"] = True
-                st.session_state["f_desc"] = f_desc
-                st.session_state["f_data_ini"] = f_data_ini
-                st.session_state["f_data_fim"] = f_data_fim
-                st.session_state["f_banco"] = f_banco
-                st.session_state["f_status"] = f_status
-                st.rerun()
-        with col_btn2:
-            if st.form_submit_button("Limpar Filtros", use_container_width=True):
-                st.session_state["filtro_ativo"] = False
-                st.session_state["f_desc"] = None
-                st.session_state["f_data_ini"] = None
-                st.session_state["f_data_fim"] = None
-                st.session_state["f_banco"] = None
-                st.session_state["f_status"] = None
-                st.rerun()
+    st.write("")
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("Aplicar Filtros", type="primary", use_container_width=True):
+            st.session_state["filtro_ativo"] = True
+            st.session_state["f_desc"] = f_desc
+            st.session_state["f_data_ini"] = f_data_ini
+            st.session_state["f_data_fim"] = f_data_fim
+            st.session_state["f_banco"] = f_banco
+            st.session_state["f_status"] = f_status
+            st.session_state["modal_filtro_aberto"] = False
+            st.rerun()
+    with col_btn2:
+        if st.button("Limpar Filtros", use_container_width=True, key="btn_limpar"):
+            st.session_state["filtro_ativo"] = False
+            st.session_state["f_desc"] = None
+            st.session_state["f_data_ini"] = None
+            st.session_state["f_data_fim"] = None
+            st.session_state["f_banco"] = None
+            st.session_state["f_status"] = None
+            st.session_state["date_ini"] = datetime.date.today()
+            st.session_state["date_fim"] = datetime.date.today()
+            st.session_state["modal_filtro_aberto"] = False
+            st.rerun()
 
 # ---------------- TELA DE LOGIN ----------------
 if not st.session_state["logado"]:
@@ -308,23 +303,7 @@ if not st.session_state["logado"]:
 
 # ---------------- TELA PRINCIPAL ----------------
 
-# Top Icons
-with st.container(key="nav_icons"):
-    col_user, col_add, col_filter, col_report = st.columns(4)
-    with col_user:
-        if st.button("👤", use_container_width=True, help="Configurações e Ajuda"):
-            modal_configuracoes()
-    with col_add:
-        if st.button("➕", type="primary", use_container_width=True, key="btn_add", help="Adicionar Nova Conta"):
-            modal_adicionar()
-    with col_filter:
-        if st.button("🔍", use_container_width=True, help="Filtros Avançados"):
-            modal_filtros()
-    with col_report:
-        if st.button("📊", use_container_width=True, help="Relatórios"):
-            st.toast("Relatórios em breve!")
-
-# Month Nav
+# 1. Navegação do Mês
 if not st.session_state["filtro_ativo"]:
     with st.container(key="nav_mes"):
         col_prev, col_titulo, col_next = st.columns([1, 2, 1])
@@ -337,7 +316,7 @@ if not st.session_state["filtro_ativo"]:
             meses_pt = {"January": "Janeiro", "February": "Fevereiro", "March": "Março", "April": "Abril", "May": "Maio", "June": "Junho", "July": "Julho", "August": "Agosto", "September": "Setembro", "October": "Outubro", "November": "Novembro", "December": "Dezembro"}
             for en, pt in meses_pt.items():
                 if en in nome_mes: nome_mes = nome_mes.replace(en, pt)
-            st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 15px; color: #0d6efd; font-weight: bold; padding-top: 6px;'>{nome_mes}</h4>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 14px; color: #0d6efd; font-weight: bold; padding-top: 6px;'>{nome_mes}</h4>", unsafe_allow_html=True)
         with col_next:
             if st.button("Próximo ▶", key="btn_next", use_container_width=True):
                 st.session_state["mes_atual"] += relativedelta(months=1)
@@ -347,14 +326,35 @@ else:
     with col_info:
         st.info("🔍 Filtros Ativos")
     with col_btn_clear:
-        if st.button("❌ Limpar", use_container_width=True, type="primary"):
+        if st.button("❌ Limpar", use_container_width=True, key="btn_limpar_topo"):
             st.session_state["filtro_ativo"] = False
             st.session_state["f_desc"] = None
             st.session_state["f_data_ini"] = None
             st.session_state["f_data_fim"] = None
             st.session_state["f_banco"] = None
             st.session_state["f_status"] = None
+            st.session_state["date_ini"] = datetime.date.today()
+            st.session_state["date_fim"] = datetime.date.today()
             st.rerun()
+
+st.write("")
+
+# 2. Barra de Ícones
+with st.container(key="nav_icons"):
+    col_user, col_add, col_filter, col_report = st.columns(4)
+    with col_user:
+        if st.button("👤", use_container_width=True, help="Configurações e Ajuda"):
+            modal_configuracoes()
+    with col_add:
+        if st.button("➕", type="primary", use_container_width=True, key="btn_add", help="Adicionar Nova Conta"):
+            modal_adicionar()
+    with col_filter:
+        if st.button("🔍", use_container_width=True, help="Filtros Avançados"):
+            st.session_state["modal_filtro_aberto"] = True
+            st.rerun()  # Força a re-execução para abrir o modal
+    with col_report:
+        if st.button("📊", use_container_width=True, help="Relatórios"):
+            st.toast("Relatórios em breve!")
 
 st.write("")
 
@@ -392,18 +392,18 @@ total_pendente = total_mes - total_pago
 def fmt_moeda(v):
     return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# Summary Cards (smaller height)
+# 3. Cards de Resumo
 st.markdown(f"""
 <div style="display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px;">
-    <div style="flex: 1; background: #e3f2fd; padding: 6px 5px; border-radius: 10px; text-align: center; border: 1px solid #b6d4fe;">
+    <div style="flex: 1; background: #e3f2fd; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #b6d4fe;">
         <div style="font-size: 10px; color: #0d6efd; font-weight: 700; text-transform: uppercase;">A Pagar</div>
         <div style="font-size: 15px; font-weight: 800; color: #0d6efd;">{fmt_moeda(total_mes)}</div>
     </div>
-    <div style="flex: 1; background: #d4edda; padding: 6px 5px; border-radius: 10px; text-align: center; border: 1px solid #c3e6cb;">
+    <div style="flex: 1; background: #d4edda; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #c3e6cb;">
         <div style="font-size: 10px; color: #155724; font-weight: 700; text-transform: uppercase;">Pago</div>
         <div style="font-size: 15px; font-weight: 800; color: #155724;">{fmt_moeda(total_pago)}</div>
     </div>
-    <div style="flex: 1; background: #fff3cd; padding: 6px 5px; border-radius: 10px; text-align: center; border: 1px solid #ffe69c;">
+    <div style="flex: 1; background: #fff3cd; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #ffe69c;">
         <div style="font-size: 10px; color: #856404; font-weight: 700; text-transform: uppercase;">Pendente</div>
         <div style="font-size: 15px; font-weight: 800; color: #856404;">{fmt_moeda(total_pendente)}</div>
     </div>
@@ -482,3 +482,8 @@ with st.container(height=500, border=False):
                     with btn_col3:
                         if st.button("🗑️ Excluir", key=f"btn_del_{conta['ID_Unico']}", use_container_width=True):
                             modal_excluir(conta['ID_Unico'], conta['Descricao'])
+
+# --- CHAMADA DO MODAL DE FILTRO ---
+# Este trecho garante que o modal continue aberto quando as setinhas são clicadas
+if st.session_state["modal_filtro_aberto"]:
+    modal_filtros()
