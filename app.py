@@ -1,6 +1,7 @@
 import streamlit as st
 import datetime
 from dateutil.relativedelta import relativedelta
+import pandas as pd
 from services import google_sheets as gs
 
 st.set_page_config(page_title="Contas a Pagar", page_icon="💰", layout="centered")
@@ -51,7 +52,11 @@ st.markdown("""
     div.st-key-btn_sair button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
     div.st-key-btn_sair button * { color: white !important; }
 
-    /* Cabeçalho do Mês (Reduzido) */
+    /* Cor do botão Limpar Filtros */
+    div.st-key-btn_limpar_filtros button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
+    div.st-key-btn_limpar_filtros button * { color: white !important; }
+
+    /* Cabeçalho do Mês */
     div[class*="st-key-nav_mes"] div[data-testid="stHorizontalBlock"] { 
         background-color: #e3f2fd !important; 
         border-radius: 10px !important;
@@ -74,7 +79,7 @@ st.markdown("""
         font-size: 15px !important;
     }
 
-    /* Força a linha de botões (Pagar, Editar, Excluir) a ficar lado a lado e mais fina */
+    /* Força a linha de botões (Pagar, Editar, Excluir) a ficar lado a lado */
     div[class*="st-key-btn_row_"] div[data-testid="stHorizontalBlock"] {
         display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px !important;
     }
@@ -89,7 +94,8 @@ st.markdown("""
         width: 100% !important;
         display: flex !important; align-items: center !important; justify-content: center !important;
     }
-    /* 🎯 Borda e Destaque no Checkbox */
+
+    /* Borda e Destaque no Checkbox */
     div[data-testid="stCheckbox"] {
         background-color: #f8f9fa !important;
         padding: 8px 12px !important;
@@ -97,15 +103,11 @@ st.markdown("""
         border: 1.2px solid #0d6efd !important;
         margin-bottom: 12px !important;
     }
-    
-    /* Deixa o quadradinho do checkbox com borda visível */
     div[data-testid="stCheckbox"] div[data-baseweb="checkbox"] > div:first-child {
         border: 2px solid #0d6efd !important;
         border-radius: 4px !important;
         background-color: #ffffff !important;
     }
-    
-    /* Deixa o texto do checkbox azul e em negrito */
     div[data-testid="stCheckbox"] p {
         font-size: 15px !important;
         font-weight: 600 !important;
@@ -118,6 +120,7 @@ st.markdown("""
 if "logado" not in st.session_state: st.session_state["logado"] = False
 if "usuario" not in st.session_state: st.session_state["usuario"] = ""
 if "mes_atual" not in st.session_state: st.session_state["mes_atual"] = datetime.date.today().replace(day=1)
+if "filtro_ativo" not in st.session_state: st.session_state["filtro_ativo"] = False
 
 BANCOS = ["", "Banco do Brasil", "Bradesco", "C6 Bank", "Caixa", "Dinheiro", "Inter", "Itaú", "Nubank", "PicPay", "Santander", "Sicredi"]
 
@@ -240,7 +243,6 @@ if not st.session_state["logado"]:
     st.stop()
 
 # ---------------- TELA PRINCIPAL ----------------
-
 with st.expander("👤 Conta e Configurações", expanded=False):
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -251,34 +253,102 @@ with st.expander("👤 Conta e Configurações", expanded=False):
             st.session_state["usuario"] = ""
             st.rerun()
 
-# Cabeçalho do Mês
-with st.container(key="nav_mes"):
-    col_prev, col_titulo, col_next = st.columns([1, 2, 1])
-    
-    with col_prev:
-        if st.button("◀ Anterior", key="btn_prev", use_container_width=True):
-            st.session_state["mes_atual"] -= relativedelta(months=1)
-            st.rerun()
-            
-    with col_titulo:
-        nome_mes = st.session_state["mes_atual"].strftime("%B/%Y").capitalize()
-        meses_pt = {"January": "Janeiro", "February": "Fevereiro", "March": "Março", "April": "Abril", "May": "Maio", "June": "Junho", "July": "Julho", "August": "Agosto", "September": "Setembro", "October": "Outubro", "November": "Novembro", "December": "Dezembro"}
-        for en, pt in meses_pt.items():
-            if en in nome_mes: nome_mes = nome_mes.replace(en, pt)
-        st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 15px; color: #0d6efd; font-weight: bold; padding-top: 6px;'>{nome_mes}</h4>", unsafe_allow_html=True)
-            
-    with col_next:
-        if st.button("Próximo ▶", key="btn_next", use_container_width=True):
-            st.session_state["mes_atual"] += relativedelta(months=1)
-            st.rerun()
+# --- NAVEGAÇÃO DO MÊS (Oculta se filtro estiver ativo) ---
+if not st.session_state["filtro_ativo"]:
+    with st.container(key="nav_mes"):
+        col_prev, col_titulo, col_next = st.columns([1, 2, 1])
+        
+        with col_prev:
+            if st.button("◀ Anterior", key="btn_prev", use_container_width=True):
+                st.session_state["mes_atual"] -= relativedelta(months=1)
+                st.rerun()
+                
+        with col_titulo:
+            nome_mes = st.session_state["mes_atual"].strftime("%B/%Y").capitalize()
+            meses_pt = {"January": "Janeiro", "February": "Fevereiro", "March": "Março", "April": "Abril", "May": "Maio", "June": "Junho", "July": "Julho", "August": "Agosto", "September": "Setembro", "October": "Outubro", "November": "Novembro", "December": "Dezembro"}
+            for en, pt in meses_pt.items():
+                if en in nome_mes: nome_mes = nome_mes.replace(en, pt)
+            st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 15px; color: #0d6efd; font-weight: bold; padding-top: 6px;'>{nome_mes}</h4>", unsafe_allow_html=True)
+                
+        with col_next:
+            if st.button("Próximo ▶", key="btn_next", use_container_width=True):
+                st.session_state["mes_atual"] += relativedelta(months=1)
+                st.rerun()
+else:
+    st.info("🔍 Exibindo resultados filtrados. Clique em 'Limpar Filtros' para voltar à visão mensal.")
 
 st.write("")
 
-mes_busca = st.session_state["mes_atual"].strftime("%Y-%m")
-contas_do_mes = gs.carregar_contas(st.session_state["usuario"], mes_busca)
+# --- ÁREA DE FILTROS ---
+with st.expander("🔍 Filtros Avançados", expanded=st.session_state["filtro_ativo"]):
+    with st.form("form_filtros"):
+        # Autocomplete na descrição
+        sugestoes = gs.obter_descricoes_usuario(st.session_state["usuario"])
+        f_desc = st.selectbox("Descrição", [""] + sugestoes)
+        
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            f_data_ini = st.date_input("Data Inicial", value=None, format="DD/MM/YYYY")
+        with col_f2:
+            f_data_fim = st.date_input("Data Final", value=None, format="DD/MM/YYYY")
+            
+        col_f3, col_f4 = st.columns(2)
+        with col_f3:
+            f_banco = st.selectbox("Banco", ["Todos"] + BANCOS[1:])
+        with col_f4:
+            f_status = st.selectbox("Status", ["Todos", "Pago", "Pendente"])
+            
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.form_submit_button("Aplicar Filtros", type="primary", use_container_width=True):
+                st.session_state["filtro_ativo"] = True
+                st.session_state["f_desc"] = f_desc
+                st.session_state["f_data_ini"] = f_data_ini
+                st.session_state["f_data_fim"] = f_data_fim
+                st.session_state["f_banco"] = f_banco
+                st.session_state["f_status"] = f_status
+                st.rerun()
+        with col_btn2:
+            if st.form_submit_button("Limpar Filtros", key="btn_limpar_filtros", use_container_width=True):
+                st.session_state["filtro_ativo"] = False
+                st.rerun()
 
-total_mes = sum(float(c['Valor']) for c in contas_do_mes)
-total_pago = sum(float(c['Valor']) for c in contas_do_mes if c['Status'] == 'Pago')
+st.write("")
+
+# --- LÓGICA DE DADOS (COM OU SEM FILTRO) ---
+if st.session_state["filtro_ativo"]:
+    todas_contas = gs.carregar_todas_contas(st.session_state["usuario"])
+    
+    if not todas_contas:
+        contas_exibicao = []
+    else:
+        df = pd.DataFrame(todas_contas)
+        df['Data_Venc_Obj'] = pd.to_datetime(df['Vencimento'], format='%d/%m/%Y', errors='coerce')
+        
+        if st.session_state.get("f_desc") and st.session_state["f_desc"] != "":
+            df = df[df['Descricao'].str.contains(st.session_state["f_desc"], case=False, na=False)]
+            
+        if st.session_state.get("f_data_ini"):
+            df = df[df['Data_Venc_Obj'].dt.date >= st.session_state["f_data_ini"]]
+            
+        if st.session_state.get("f_data_fim"):
+            df = df[df['Data_Venc_Obj'].dt.date <= st.session_state["f_data_fim"]]
+            
+        if st.session_state.get("f_banco") and st.session_state["f_banco"] != "Todos":
+            df = df[df['Banco'] == st.session_state["f_banco"]]
+            
+        if st.session_state.get("f_status") and st.session_state["f_status"] != "Todos":
+            df = df[df['Status'] == st.session_state["f_status"]]
+            
+        df = df.sort_values(by='Data_Venc_Obj')
+        contas_exibicao = df.to_dict('records')
+else:
+    mes_busca = st.session_state["mes_atual"].strftime("%Y-%m")
+    contas_exibicao = gs.carregar_contas(st.session_state["usuario"], mes_busca)
+
+# --- CARDS DE RESUMO ---
+total_mes = sum(float(c['Valor']) for c in contas_exibicao)
+total_pago = sum(float(c['Valor']) for c in contas_exibicao if c['Status'] == 'Pago')
 total_pendente = total_mes - total_pago
 
 def fmt_moeda(v):
@@ -308,10 +378,10 @@ st.write("")
 
 # ---------------- ÁREA DE ROLAGEM EXCLUSIVA DOS CARDS ----------------
 with st.container(height=500, border=False):
-    if not contas_do_mes:
-        st.info("Nenhuma conta cadastrada para este mês.")
+    if not contas_exibicao:
+        st.info("Nenhuma conta encontrada com os filtros atuais.")
     else:
-        for conta in contas_do_mes:
+        for conta in contas_exibicao:
             valor_fmt = fmt_moeda(float(conta['Valor']))
             
             if conta['Status'] == 'Pago':
@@ -344,7 +414,9 @@ with st.container(height=500, border=False):
             
             with st.container(key=f"card_{conta['ID_Unico']}"):
                 
-                st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'><div style='font-weight: 700; font-size: 16px; color: #000;'>{conta['Descricao']}</div><div style='font-weight: 700; font-size: 16px; color: #0d6efd;'>{valor_fmt}</div></div>", unsafe_allow_html=True)
+                ref_txt = f" | Ref: {conta['Mes_Ref']}" if st.session_state["filtro_ativo"] else ""
+                
+                st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'><div style='font-weight: 700; font-size: 16px; color: #000;'>{conta['Descricao']}{ref_txt}</div><div style='font-weight: 700; font-size: 16px; color: #0d6efd;'>{valor_fmt}</div></div>", unsafe_allow_html=True)
                 
                 bloco_esq = f"<div style='font-size: 12px; color: #000;'>📅 Vence: <b>{conta['Vencimento']}</b></div>"
                 if conta['Status'] == 'Pago' and conta.get('Data_Pagamento'):

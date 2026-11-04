@@ -91,7 +91,6 @@ def salvar_conta(email, mes_ref, descricao, valor, vencimento, observacao=""):
         import uuid
         ws = _get_contas_ws()
         id_unico = str(uuid.uuid4())
-        # Adiciona linha com 10 colunas (a última vazia para o banco)
         ws.append_row([id_unico, email.lower(), mes_ref, descricao, float(valor), vencimento, "Pendente", "", observacao, ""])
         return True
     except Exception as e:
@@ -111,14 +110,27 @@ def carregar_contas(email, mes_ref):
         print(f"Erro ao carregar contas: {e}")
         return []
 
+def carregar_todas_contas(email):
+    try:
+        ws = _get_contas_ws()
+        registros = ws.get_all_records()
+        contas = []
+        for reg in registros:
+            if str(reg.get("Email", "")).lower() == email.lower():
+                contas.append(reg)
+        return contas
+    except Exception as e:
+        print(f"Erro ao carregar todas as contas: {e}")
+        return []
+
 def atualizar_status_conta(id_unico, novo_status, data_pagamento="", banco=""):
     try:
         ws = _get_contas_ws()
         cell = ws.find(id_unico)
         if cell:
-            ws.update_cell(cell.row, 7, novo_status) # Coluna 7: Status
-            ws.update_cell(cell.row, 8, data_pagamento) # Coluna 8: Data_Pagamento
-            ws.update_cell(cell.row, 10, banco) # Coluna 10: Banco
+            ws.update_cell(cell.row, 7, novo_status)
+            ws.update_cell(cell.row, 8, data_pagamento)
+            ws.update_cell(cell.row, 10, banco)
             return True
         return False
     except Exception as e:
@@ -145,11 +157,11 @@ def editar_conta(id_unico, descricao, valor, vencimento, observacao, banco=""):
         ws = _get_contas_ws()
         cell = ws.find(id_unico)
         if cell:
-            ws.update_cell(cell.row, 4, descricao)   # Coluna 4: Descrição
-            ws.update_cell(cell.row, 5, float(valor)) # Coluna 5: Valor
-            ws.update_cell(cell.row, 6, vencimento)  # Coluna 6: Vencimento
-            ws.update_cell(cell.row, 9, observacao)  # Coluna 9: Observação
-            ws.update_cell(cell.row, 10, banco)      # Coluna 10: Banco
+            ws.update_cell(cell.row, 4, descricao)
+            ws.update_cell(cell.row, 5, float(valor))
+            ws.update_cell(cell.row, 6, vencimento)
+            ws.update_cell(cell.row, 9, observacao)
+            ws.update_cell(cell.row, 10, banco)
             return True
         return False
     except Exception as e:
