@@ -1,8 +1,15 @@
 import streamlit as st
 import datetime
+import calendar
+import re
 from dateutil.relativedelta import relativedelta
 import pandas as pd
+from fpdf import FPDF
 from services import google_sheets as gs
+from decimal import Decimal, InvalidOperation
+
+# Limpa o cache a cada inicialização para evitar dados antigos
+st.cache_data.clear()
 
 st.set_page_config(page_title="Contas a Pagar", page_icon="💰", layout="centered")
 
@@ -41,21 +48,20 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* Barra de Ícones */
+    /* Barra de Ícones (Azul Claro) */
     div[class*="st-key-nav_icons"] div[data-testid="stHorizontalBlock"] {
-        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 8px !important; margin-bottom: 10px !important;
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 6px !important; margin-bottom: 10px !important;
     }
     div[class*="st-key-nav_icons"] div[data-testid="stColumn"] {
         flex: 1 1 0% !important; min-width: 0 !important; padding: 0 !important;
     }
     div[class*="st-key-nav_icons"] button {
-        background-color: #f8f9fa !important; color: #0d6efd !important;
-        border: 1.2px solid #0d6efd !important; border-radius: 8px !important;
-        height: 42px !important; padding: 0 !important; font-size: 18px !important;
+        background-color: #e3f2fd !important; 
+        border: 1px solid #90caf9 !important; 
+        border-radius: 8px !important;
+        height: 42px !important; padding: 0 !important; font-size: 20px !important;
     }
     div[class*="st-key-nav_icons"] button * { color: #0d6efd !important; }
-    div[class*="st-key-nav_icons"] div[class*="st-key-btn_add"] button { background-color: #198754 !important; border-color: #198754 !important; }
-    div[class*="st-key-nav_icons"] div[class*="st-key-btn_add"] button * { color: white !important; }
 
     /* Navegação do Mês */
     div[class*="st-key-nav_mes"] div[data-testid="stHorizontalBlock"] { 
@@ -72,15 +78,15 @@ st.markdown("""
     div[class*="st-key-nav_mes"] button * { color: white !important; }
     div[class*="st-key-nav_mes"] h4 { padding-top: 5px !important; font-size: 14px !important; }
 
-    /* Botões de Ação nos Cards */
+    /* Botões de Ação nos Cards (Mais finos) */
     div[class*="st-key-btn_row_"] div[data-testid="stHorizontalBlock"] {
-        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px !important;
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 2px !important;
     }
     div[class*="st-key-btn_row_"] div[data-testid="stColumn"] {
         flex: 1 1 0% !important; min-width: 0 !important; padding: 0 !important;
     }
     div[class*="st-key-btn_row_"] button {
-        font-size: 11px !important; height: 30px !important; min-height: 30px !important;
+        font-size: 10px !important; height: 26px !important; min-height: 26px !important;
         padding: 0 !important; width: 100% !important;
         display: flex !important; align-items: center !important; justify-content: center !important;
     }
@@ -95,23 +101,20 @@ st.markdown("""
     }
     div[data-testid="stCheckbox"] p { font-size: 15px !important; font-weight: 600 !important; color: #0d6efd !important; }
 
-    /* Botões de Sair e Limpar */
+    /* Botões de Sair */
     div[class*="st-key-btn_sair"] button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
     div[class*="st-key-btn_sair"] button * { color: white !important; }
-    div[class*="st-key-btn_limpar"] button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
-    div[class*="st-key-btn_limpar"] button * { color: white !important; }
 
-    /* Calendário Customizado nos Filtros */
-    div[class*="st-key-date_nav_"] div[data-testid="stHorizontalBlock"] {
-        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 2px !important;
-        align-items: center !important; justify-content: center !important;
+    /* Botão de Download do PDF */
+    div[class*="st-key-download_pdf_relatorio"] button {
+        background-color: #fd7e14 !important; /* Laranja vibrante */
+        color: white !important;
+        border: 1px solid #fd7e14 !important;
+        font-weight: bold !important;
+        font-size: 16px !important;
+        padding: 10px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
     }
-    div[class*="st-key-date_nav_"] div[data-testid="stColumn"] { padding: 0 !important; min-width: 0 !important; }
-    div[class*="st-key-date_nav_"] button {
-        background-color: transparent !important; border: none !important; color: #0d6efd !important; 
-        font-size: 18px !important; height: 20px !important; padding: 0 !important;
-    }
-    div[class*="st-key-date_nav_"] button:hover { background-color: #e3f2fd !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -120,11 +123,97 @@ if "logado" not in st.session_state: st.session_state["logado"] = False
 if "usuario" not in st.session_state: st.session_state["usuario"] = ""
 if "mes_atual" not in st.session_state: st.session_state["mes_atual"] = datetime.date.today().replace(day=1)
 if "filtro_ativo" not in st.session_state: st.session_state["filtro_ativo"] = False
-if "modal_filtro_aberto" not in st.session_state: st.session_state["modal_filtro_aberto"] = False
-if "date_ini" not in st.session_state: st.session_state["date_ini"] = datetime.date.today()
-if "date_fim" not in st.session_state: st.session_state["date_fim"] = datetime.date.today()
+if "ordenacao_cards" not in st.session_state: st.session_state["ordenacao_cards"] = "padrao"
 
 BANCOS = ["", "Banco do Brasil", "Bradesco", "C6 Bank", "Caixa", "Dinheiro", "Inter", "Itaú", "Nubank", "PicPay", "Santander", "Sicredi"]
+
+# ---------------- FUNÇÕES AUXILIARES ----------------
+def obter_nome_mes_atual():
+    nome_mes = st.session_state["mes_atual"].strftime("%B de %Y").capitalize()
+    meses_en = {"January": "Janeiro", "February": "Fevereiro", "March": "Março", "April": "Abril", "May": "Maio", "June": "Junho", "July": "Julho", "August": "Agosto", "September": "Setembro", "October": "Outubro", "November": "Novembro", "December": "Dezembro"}
+    for en, pt in meses_en.items():
+        if en in nome_mes: nome_mes = nome_mes.replace(en, pt)
+    return nome_mes
+
+def parse_valor(txt):
+    if not txt or not str(txt).strip():
+        raise ValueError("Informe o valor da conta.")
+    s = str(txt).strip().replace("R$", "").replace(" ", "")
+    if "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    try:
+        valor = Decimal(s).quantize(Decimal("0.01"))
+        if not valor.is_finite() or valor <= 0:
+            raise ValueError("Informe um valor maior que zero.")
+        return float(valor)
+    except (InvalidOperation, ValueError):
+        raise ValueError("Valor inválido. Exemplo: 100,50.")
+
+# ---------------- GERAÇÃO DE PDF ----------------
+def sanitizar_pdf(texto):
+    # Garante que caracteres especiais e acentos não quebrem o PDF
+    return str(texto).encode('latin-1', 'replace').decode('latin-1')
+
+def gerar_pdf(contas, periodo_txt=""):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Cabeçalho Principal
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, "Relatorio de Contas a Pagar", ln=True, align="C")
+    
+    pdf.set_font("Arial", size=11)
+    pdf.cell(0, 8, f"Referencia: {sanitizar_pdf(periodo_txt)}", ln=True, align="C")
+    
+    # Cálculo dos Totais
+    t_total = sum(float(c.get('Valor', 0)) for c in contas)
+    t_pago = sum(float(c.get('Valor', 0)) for c in contas if c.get('Status') == 'Pago')
+    t_pend = t_total - t_pago
+    
+    def fmt_pdf(v):
+        return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    # Exibição dos Totais no Topo
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(0, 8, f"Total Geral: {fmt_pdf(t_total)}   |   Total Pago: {fmt_pdf(t_pago)}   |   Total Pendente: {fmt_pdf(t_pend)}", ln=True, align="C")
+    
+    pdf.ln(5)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(5)
+    
+    # Cabeçalho da Tabela
+    pdf.set_font("Arial", 'B', 9)
+    pdf.set_fill_color(230, 230, 230) # Fundo cinza claro para o cabeçalho
+    # Larguras: Desc(55), Venc(25), Pag(25), Status(22), Valor(25), Banco(18) = 170
+    pdf.cell(55, 8, "Descricao", border=1, fill=True)
+    pdf.cell(25, 8, "Vencimento", border=1, fill=True)
+    pdf.cell(25, 8, "Pagamento", border=1, fill=True)
+    pdf.cell(22, 8, "Status", border=1, fill=True)
+    pdf.cell(25, 8, "Valor", border=1, fill=True)
+    pdf.cell(18, 8, "Banco", border=1, fill=True)
+    pdf.ln()
+    
+    # Linhas da Tabela
+    pdf.set_font("Arial", size=9)
+    for c in contas:
+        valor = float(c.get('Valor', 0))
+        val_fmt = fmt_pdf(valor)
+        desc = sanitizar_pdf(c.get('Descricao', ''))[:28]
+        venc = sanitizar_pdf(c.get('Vencimento', ''))
+        pag = sanitizar_pdf(c.get('Data_Pagamento', '-')) if c.get('Data_Pagamento') else '-'
+        status = sanitizar_pdf(c.get('Status', ''))
+        banco = sanitizar_pdf(c.get('Banco', ''))[:12]
+        
+        pdf.cell(55, 8, desc, border=1)
+        pdf.cell(25, 8, venc, border=1, align="C")
+        pdf.cell(25, 8, pag, border=1, align="C")
+        pdf.cell(22, 8, status, border=1, align="C")
+        pdf.cell(25, 8, val_fmt, border=1, align="R")
+        pdf.cell(18, 8, banco, border=1)
+        pdf.ln()
+        
+    pdf.ln(5)
+    return bytes(pdf.output())
 
 # ---------------- MODAIS ----------------
 @st.dialog("Confirmar Pagamento")
@@ -140,7 +229,7 @@ def modal_pagar(conta_id, valor):
         if gs.atualizar_status_conta(conta_id, "Pago", data_pag.strftime("%d/%m/%Y"), banco_final):
             st.rerun()
 
-@st.dialog("Adicionar Nova Conta")
+@st.dialog(f"Nova Conta para {obter_nome_mes_atual()}")
 def modal_adicionar():
     sugestoes = gs.obter_descricoes_usuario(st.session_state["usuario"])
     nova_conta = st.checkbox("Cadastrar nova conta")
@@ -155,7 +244,7 @@ def modal_adicionar():
     
     col_val, col_venc = st.columns(2)
     with col_val:
-        val_input = st.number_input("Valor (R$)", min_value=0.0, format="%.2f", value=None, placeholder="0,00")
+        val_str = st.text_input("Valor (R$)", placeholder="0,00")
     with col_venc:
         proximo_mes = st.session_state["mes_atual"] + relativedelta(months=1)
         ultimo_dia = proximo_mes - datetime.timedelta(days=1)
@@ -163,23 +252,30 @@ def modal_adicionar():
         
     obs = st.text_input("Observação (Opcional)")
     mes_busca = st.session_state["mes_atual"].strftime("%Y-%m")
+    
     if st.button("Salvar Conta", type="primary", use_container_width=True):
-        val_final = val_input if val_input is not None else 0.0
-        if not desc:
-            st.error("Por favor, preencha ou selecione uma conta.")
-        else:
-            if gs.salvar_conta(st.session_state["usuario"], mes_busca, desc, val_final, venc.strftime("%d/%m/%Y"), obs):
-                st.rerun()
+        try:
+            val_final = parse_valor(val_str)
+            if not desc:
+                st.error("Por favor, preencha ou selecione uma conta.")
+            else:
+                if gs.salvar_conta(st.session_state["usuario"], mes_busca, desc, val_final, venc.strftime("%d/%m/%Y"), obs):
+                    st.rerun()
+                else:
+                    st.error("Não foi possível salvar a conta.")
+        except ValueError as e:
+            st.error(str(e))
 
 @st.dialog("Editar Conta")
 def modal_editar(conta):
-    st.markdown(f"**Editando:** {conta['Descricao']}")
+    st.markdown(f"**Editando:** {conta.get('Descricao', '')}")
     col_val, col_venc = st.columns(2)
     with col_val:
-        val_atual = float(conta['Valor'])
-        val_input = st.number_input("Valor (R$)", min_value=0.0, value=val_atual if val_atual > 0 else None, format="%.2f", placeholder="0,00")
+        val_atual = float(conta.get('Valor', 0))
+        val_str_atual = f"{val_atual:.2f}".replace(".", ",")
+        val_str = st.text_input("Valor (R$)", value=val_str_atual)
     with col_venc:
-        data_venc_obj = datetime.datetime.strptime(conta['Vencimento'], "%d/%m/%Y").date()
+        data_venc_obj = datetime.datetime.strptime(conta.get('Vencimento', ''), "%d/%m/%Y").date()
         novo_venc = st.date_input("Vencimento", value=data_venc_obj, format="DD/MM/YYYY")
     banco_salvo = conta.get('Banco', '')
     if banco_salvo and banco_salvo not in BANCOS:
@@ -193,9 +289,32 @@ def modal_editar(conta):
             idx_banco = BANCOS.index(banco_salvo) if banco_salvo in BANCOS else 0
             banco_final = st.selectbox("Banco utilizado", BANCOS, index=idx_banco)
     nova_obs = st.text_input("Observação", value=conta.get('Observacao', ''))
+    
     if st.button("Salvar Alterações", type="primary", use_container_width=True):
-        val_final = val_input if val_input is not None else 0.0
-        if gs.editar_conta(conta['ID_Unico'], conta['Descricao'], val_final, novo_venc.strftime("%d/%m/%Y"), nova_obs, banco_final):
+        try:
+            val_final = parse_valor(val_str)
+            if gs.editar_conta(conta.get('ID_Unico'), conta.get('Descricao', ''), val_final, novo_venc.strftime("%d/%m/%Y"), nova_obs, banco_final):
+                st.rerun()
+            else:
+                st.error("Não foi possível salvar as alterações.")
+        except ValueError as e:
+            st.error(str(e))
+
+@st.dialog("Copiar Conta")
+def modal_copiar(conta):
+    valor = float(conta.get('Valor', 0))
+    st.write(f"Copiar **{conta.get('Descricao', '')}** (R$ {valor:.2f}) para os próximos meses.")
+    qtd = st.number_input("Para quantos meses deseja copiar?", min_value=1, max_value=12, value=1)
+    
+    if st.button("Confirmar Cópia", type="primary", use_container_width=True):
+        with st.spinner("Copiando..."):
+            data_venc_obj = datetime.datetime.strptime(conta.get('Vencimento', ''), "%d/%m/%Y").date()
+            for i in range(1, int(qtd)+1):
+                novo_mes = st.session_state["mes_atual"] + relativedelta(months=i)
+                mes_busca = novo_mes.strftime("%Y-%m")
+                nova_data_venc = data_venc_obj + relativedelta(months=i)
+                gs.salvar_conta(st.session_state["usuario"], mes_busca, conta.get('Descricao', ''), valor, nova_data_venc.strftime("%d/%m/%Y"), conta.get('Observacao', ''))
+            st.success("Copiado com sucesso!")
             st.rerun()
 
 @st.dialog("Excluir Conta")
@@ -214,41 +333,31 @@ def modal_configuracoes():
     st.divider()
     tab_sobre, tab_como, tab_creditos = st.tabs(["Sobre", "Como Usar", "Tecnologias"])
     with tab_sobre:
-        st.markdown("### 💰 Contas a Pagar JEN\n**Versão:** 1.0\nO melhor gerenciador de contas pessoais. Organize seus pagamentos, acompanhe seus gastos e nunca perca um vencimento.")
+        st.markdown("### 💰 Contas a Pagar JEN\n**Versão:** 1.2\nO melhor gerenciador de contas pessoais. Organize seus pagamentos, acompanhe seus gastos e nunca perca um vencimento.")
     with tab_como:
-        st.markdown("1. Adicione contas clicando no botão **➕**.\n2. Marque como pagas quando quitar o débito.\n3. Use os filtros **🔍** para achar contas antigas por período ou banco.\n4. Acompanhe os totais no topo da tela.")
+        st.markdown("1. Adicione contas clicando no botão **➕**.\n2. Marque como pagas clicando no botão de status no card.\n3. Use os filtros **🔍** para achar contas antigas por período ou banco.")
     with tab_creditos:
         st.markdown("**Desenvolvido por:** João Evangelista Neto\n**Tecnologias:** Streamlit, Pandas, Google Sheets API.\n**Objetivo:** Facilitar a gestão financeira pessoal.")
 
 @st.dialog("🔍 Filtros Avançados")
 def modal_filtros():
     sugestoes = gs.obter_descricoes_usuario(st.session_state["usuario"])
-    idx_desc = 0
-    if st.session_state.get("f_desc") in sugestoes:
-        idx_desc = sugestoes.index(st.session_state["f_desc"]) + 1
-    f_desc = st.selectbox("Descrição", [""] + sugestoes, index=idx_desc)
+    f_desc = st.selectbox("Descrição", [""] + sugestoes)
     
-    st.markdown("**Data Inicial**")
-    if "date_ini" not in st.session_state:
-        st.session_state["date_ini"] = datetime.date.today()
-    f_data_ini = st.date_input("Selecione a data", format="DD/MM/YYYY", key="date_ini", label_visibility="collapsed")
+    hoje = datetime.date.today()
+    primeiro_dia_mes = hoje.replace(day=1)
     
-    st.markdown("**Data Final**")
-    if "date_fim" not in st.session_state:
-        st.session_state["date_fim"] = datetime.date.today()
-    f_data_fim = st.date_input("Selecione a data", format="DD/MM/YYYY", key="date_fim", label_visibility="collapsed")
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        f_data_ini = st.date_input("Data Inicial", value=primeiro_dia_mes, format="DD/MM/YYYY", key="f_ini")
+    with col_f2:
+        f_data_fim = st.date_input("Data Final", value=hoje, format="DD/MM/YYYY", key="f_fim")
         
     col_f3, col_f4 = st.columns(2)
     with col_f3:
-        idx_banco = 0
-        if st.session_state.get("f_banco") in BANCOS:
-            idx_banco = BANCOS.index(st.session_state["f_banco"])
-        f_banco = st.selectbox("Banco", ["Todos"] + BANCOS[1:], index=idx_banco if st.session_state.get("f_banco") else 0)
+        f_banco = st.selectbox("Banco", ["Todos"] + BANCOS[1:])
     with col_f4:
-        idx_status = 0
-        if st.session_state.get("f_status") in ["Todos", "Pago", "Pendente"]:
-            idx_status = ["Todos", "Pago", "Pendente"].index(st.session_state["f_status"])
-        f_status = st.selectbox("Status", ["Todos", "Pago", "Pendente"], index=idx_status)
+        f_status = st.selectbox("Status", ["Todos", "Pago", "Pendente"])
         
     st.write("")
     col_btn1, col_btn2 = st.columns(2)
@@ -263,22 +372,19 @@ def modal_filtros():
             st.session_state["modal_filtro_aberto"] = False
             st.rerun()
     with col_btn2:
-        if st.button("Limpar Filtros", use_container_width=True, key="btn_limpar"):
+        if st.button("Limpar Filtros", use_container_width=True):
             st.session_state["filtro_ativo"] = False
             st.session_state["f_desc"] = None
             st.session_state["f_data_ini"] = None
             st.session_state["f_data_fim"] = None
             st.session_state["f_banco"] = None
             st.session_state["f_status"] = None
-            st.session_state["date_ini"] = datetime.date.today()
-            st.session_state["date_fim"] = datetime.date.today()
             st.session_state["modal_filtro_aberto"] = False
             st.rerun()
 
 # ---------------- TELA DE LOGIN ----------------
 if not st.session_state["logado"]:
     st.markdown("<h2 style='text-align: center;'>💰 Contas a Pagar</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>Acesse sua conta</p>", unsafe_allow_html=True)
     tab_login, tab_cadastro = st.tabs(["🔒 Login", "📝 Criar Conta"])
     with tab_login:
         email = st.text_input("E-mail", key="login_email")
@@ -303,7 +409,6 @@ if not st.session_state["logado"]:
 
 # ---------------- TELA PRINCIPAL ----------------
 
-# 1. Navegação do Mês
 if not st.session_state["filtro_ativo"]:
     with st.container(key="nav_mes"):
         col_prev, col_titulo, col_next = st.columns([1, 2, 1])
@@ -312,11 +417,7 @@ if not st.session_state["filtro_ativo"]:
                 st.session_state["mes_atual"] -= relativedelta(months=1)
                 st.rerun()
         with col_titulo:
-            nome_mes = st.session_state["mes_atual"].strftime("%B/%Y").capitalize()
-            meses_pt = {"January": "Janeiro", "February": "Fevereiro", "March": "Março", "April": "Abril", "May": "Maio", "June": "Junho", "July": "Julho", "August": "Agosto", "September": "Setembro", "October": "Outubro", "November": "Novembro", "December": "Dezembro"}
-            for en, pt in meses_pt.items():
-                if en in nome_mes: nome_mes = nome_mes.replace(en, pt)
-            st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 14px; color: #0d6efd; font-weight: bold; padding-top: 6px;'>{nome_mes}</h4>", unsafe_allow_html=True)
+            st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 14px; color: #0d6efd; font-weight: bold; padding-top: 6px;'>{obter_nome_mes_atual()}</h4>", unsafe_allow_html=True)
         with col_next:
             if st.button("Próximo ▶", key="btn_next", use_container_width=True):
                 st.session_state["mes_atual"] += relativedelta(months=1)
@@ -333,40 +434,47 @@ else:
             st.session_state["f_data_fim"] = None
             st.session_state["f_banco"] = None
             st.session_state["f_status"] = None
-            st.session_state["date_ini"] = datetime.date.today()
-            st.session_state["date_fim"] = datetime.date.today()
             st.rerun()
 
 st.write("")
 
-# 2. Barra de Ícones
 with st.container(key="nav_icons"):
-    col_user, col_add, col_filter, col_report = st.columns(4)
-    with col_user:
-        if st.button("👤", use_container_width=True, help="Configurações e Ajuda"):
+    c1, c2, c3, c4, c5 = st.columns(5)
+    with c1:
+        if st.button("👤", use_container_width=True, help="Ajuda e Configurações"):
             modal_configuracoes()
-    with col_add:
-        if st.button("➕", type="primary", use_container_width=True, key="btn_add", help="Adicionar Nova Conta"):
+    with c2:
+        if st.button("➕", use_container_width=True, key="btn_add", help="Adicionar Conta"):
             modal_adicionar()
-    with col_filter:
-        if st.button("🔍", use_container_width=True, help="Filtros Avançados"):
+    with c3:
+        if st.button("🔍", use_container_width=True, help="Filtros"):
             st.session_state["modal_filtro_aberto"] = True
-            st.rerun()  # Força a re-execução para abrir o modal
-    with col_report:
-        if st.button("📊", use_container_width=True, help="Relatórios"):
-            st.toast("Relatórios em breve!")
+            st.rerun()
+    with c4:
+        icones = {"padrao": "↕️", "pago": "⬆️", "pendente": "⬇️"}
+        estado = st.session_state["ordenacao_cards"]
+        if st.button(icones[estado], use_container_width=True, key="btn_order", help="Ordenar"):
+            proximo = {"padrao": "pago", "pago": "pendente", "pendente": "padrao"}
+            st.session_state["ordenacao_cards"] = proximo[estado]
+            st.rerun()
+    with c5:
+        if st.button("📊", use_container_width=True, help="Relatório PDF"):
+            st.session_state["_gerar_relatorio"] = True
+            st.rerun()
 
 st.write("")
 
-# --- LÓGICA DE DADOS ---
 if st.session_state["filtro_ativo"]:
     todas_contas = gs.carregar_todas_contas(st.session_state["usuario"])
     if not todas_contas:
         contas_exibicao = []
     else:
         df = pd.DataFrame(todas_contas)
+        # Garante que a coluna Valor exista no DataFrame
+        if 'Valor' not in df.columns:
+            df['Valor'] = 0.0
+            
         df['Data_Venc_Obj'] = pd.to_datetime(df['Vencimento'], format='%d/%m/%Y', errors='coerce')
-        
         if st.session_state.get("f_desc") and st.session_state["f_desc"] != "":
             df = df[df['Descricao'].str.contains(st.session_state["f_desc"], case=False, na=False)]
         if st.session_state.get("f_data_ini"):
@@ -377,22 +485,53 @@ if st.session_state["filtro_ativo"]:
             df = df[df['Banco'] == st.session_state["f_banco"]]
         if st.session_state.get("f_status") and st.session_state["f_status"] != "Todos":
             df = df[df['Status'] == st.session_state["f_status"]]
-            
-        df = df.sort_values(by='Data_Venc_Obj')
         contas_exibicao = df.to_dict('records')
 else:
     mes_busca = st.session_state["mes_atual"].strftime("%Y-%m")
     contas_exibicao = gs.carregar_contas(st.session_state["usuario"], mes_busca)
 
-# Totais
-total_mes = sum(float(c['Valor']) for c in contas_exibicao)
-total_pago = sum(float(c['Valor']) for c in contas_exibicao if c['Status'] == 'Pago')
+def _parse_data(v):
+    try: return datetime.datetime.strptime(v, '%d/%m/%Y')
+    except: return datetime.datetime.max
+
+modo = st.session_state["ordenacao_cards"]
+if modo == "padrao":
+    contas_exibicao = sorted(contas_exibicao, key=lambda c: _parse_data(c.get('Vencimento', '')))
+elif modo == "pago":
+    contas_exibicao = sorted(contas_exibicao, key=lambda c: (0 if c.get('Status') == 'Pago' else 1, _parse_data(c.get('Vencimento', ''))))
+else:
+    contas_exibicao = sorted(contas_exibicao, key=lambda c: (0 if c.get('Status') == 'Pendente' else 1, _parse_data(c.get('Vencimento', ''))))
+
+# Totais BLINDADOS
+total_mes = sum(float(c.get('Valor', 0)) for c in contas_exibicao)
+total_pago = sum(float(c.get('Valor', 0)) for c in contas_exibicao if c.get('Status') == 'Pago')
 total_pendente = total_mes - total_pago
 
 def fmt_moeda(v):
     return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# 3. Cards de Resumo
+if st.session_state.get("_gerar_relatorio", False):
+    st.session_state["_gerar_relatorio"] = False
+    
+    # Define o texto de referência baseado no filtro ou no mês atual
+    if st.session_state["filtro_ativo"]:
+        data_i = st.session_state.get("f_data_ini")
+        data_f = st.session_state.get("f_data_fim")
+        periodo_txt = f"Filtro: {data_i.strftime('%d/%m/%Y')} a {data_f.strftime('%d/%m/%Y')}"
+    else:
+        periodo_txt = obter_nome_mes_atual()
+        
+    pdf_bytes = gerar_pdf(contas_exibicao, periodo_txt)
+    
+    st.download_button(
+        label="📥 Clique aqui para baixar o Relatório em PDF", 
+        data=pdf_bytes, 
+        file_name="relatorio_contas.pdf", 
+        mime="application/pdf", 
+        key="download_pdf_relatorio",
+        use_container_width=True
+    )
+
 st.markdown(f"""
 <div style="display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px;">
     <div style="flex: 1; background: #e3f2fd; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #b6d4fe;">
@@ -410,80 +549,88 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Cards List
 with st.container(height=500, border=False):
     if not contas_exibicao:
         st.info("Nenhuma conta encontrada.")
     else:
         for conta in contas_exibicao:
-            valor_fmt = fmt_moeda(float(conta['Valor']))
+            # Blindagem total do valor
+            v_real = float(conta.get('Valor', 0))
+            valor_fmt = fmt_moeda(v_real)
             
-            if conta['Status'] == 'Pago':
+            if conta.get('Status') == 'Pago':
                 bg_color, border_color = "#d4edda", "#198754"
                 btn_bg, btn_border = "#198754", "#198754"
                 selo = '<span style="background:#198754; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>'
+                texto_btn_status = "🟢 Pago"
             else:
                 bg_color, border_color = "#f8d7da", "#dc3545"
                 btn_bg, btn_border = "#dc3545", "#dc3545"
                 selo = '<span style="background:#dc3545; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'
+                texto_btn_status = "🟡 Pagar"
                 
             st.markdown(f"""
             <style>
-            div[class*="st-key-card_{conta['ID_Unico']}"] {{
+                      
+            div[class*="st-key-card_{conta.get('ID_Unico', '')}"] {{
                 background-color: {bg_color} !important;
                 border: 1.5px solid {border_color} !important;
                 border-radius: 10px !important;
                 padding: 12px !important;
                 margin-bottom: 10px !important;
             }}
-            div[class*="st-key-card_{conta['ID_Unico']}"] div[class*="st-key-btn_row_"] button {{
+            div[class*="st-key-card_{conta.get('ID_Unico', '')}"] div[class*="st-key-btn_row_"] button {{
                 background-color: {btn_bg} !important;
                 border-color: {btn_border} !important;
             }}
-            div[class*="st-key-card_{conta['ID_Unico']}"] div[class*="st-key-btn_row_"] button * {{
+            div[class*="st-key-card_{conta.get('ID_Unico', '')}"] div[class*="st-key-btn_row_"] button * {{
                 color: white !important;
             }}
             </style>
             """, unsafe_allow_html=True)
             
-            with st.container(key=f"card_{conta['ID_Unico']}"):
-                ref_txt = f" | Ref: {conta['Mes_Ref']}" if st.session_state["filtro_ativo"] else ""
+            with st.container(key=f"card_{conta.get('ID_Unico', '')}"):
+                ref_txt = f" | Ref: {conta.get('Mes_Ref', '')}" if st.session_state["filtro_ativo"] else ""
                 
-                st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'><div style='font-weight: 700; font-size: 16px; color: #000;'>{conta['Descricao']}{ref_txt}</div><div style='font-weight: 700; font-size: 16px; color: #0d6efd;'>{valor_fmt}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'><div style='font-weight: 700; font-size: 16px; color: #000;'>{conta.get('Descricao', '')}{ref_txt}</div><div style='font-weight: 700; font-size: 16px; color: #0d6efd;'>{valor_fmt}</div></div>", unsafe_allow_html=True)
                 
-                bloco_esq = f"<div style='font-size: 12px; color: #000;'>📅 Vence: <b>{conta['Vencimento']}</b></div>"
-                if conta['Status'] == 'Pago' and conta.get('Data_Pagamento'):
-                    bloco_esq += f"<div style='font-size: 12px; color: #000;'>💵 Pago em: <b>{conta['Data_Pagamento']}</b></div>"
+                bloco_esq = f"<div style='font-size: 12px; color: #000;'>📅 Vence: <b>{conta.get('Vencimento', '')}</b></div>"
+                if conta.get('Status') == 'Pago' and conta.get('Data_Pagamento'):
+                    bloco_esq += f"<div style='font-size: 12px; color: #000;'>💵 Pago em: <b>{conta.get('Data_Pagamento', '')}</b></div>"
                     if conta.get('Banco'):
-                        bloco_esq += f"<div style='font-size: 12px; color: #000;'>🏦 Banco: <b>{conta['Banco']}</b></div>"
+                        bloco_esq += f"<div style='font-size: 12px; color: #000;'>🏦 Banco: <b>{conta.get('Banco', '')}</b></div>"
                 
                 bloco_dir = f"<div style='text-align: right;'><div style='font-size: 9px; color: #333; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px;'>STATUS</div><div>{selo}</div></div>"
                 
                 if conta.get('Observacao'):
-                    bloco_dir += f"<div style='font-size: 12px; color: #000; text-align: right; margin-top: 6px; word-break: break-word;'>📝 <b>{conta['Observacao']}</b></div>"
+                    bloco_dir += f"<div style='font-size: 12px; color: #000; text-align: right; margin-top: 6px; word-break: break-word;'>📝 <b>{conta.get('Observacao', '')}</b></div>"
 
                 st.markdown(f"<div style='display: flex; justify-content: space-between;'><div style='display: flex; flex-direction: column; gap: 6px;'>{bloco_esq}</div><div style='display: flex; flex-direction: column; align-items: flex-end;'>{bloco_dir}</div></div>", unsafe_allow_html=True)
                 
                 st.write("")
                 
-                with st.container(key=f"btn_row_{conta['ID_Unico']}"):
-                    btn_col1, btn_col2, btn_col3 = st.columns(3)
-                    with btn_col1:
-                        if conta['Status'] == 'Pendente':
-                            if st.button("✅ Pagar", key=f"btn_pagar_{conta['ID_Unico']}", use_container_width=True):
-                                modal_pagar(conta['ID_Unico'], float(conta['Valor']))
-                        else:
-                            if st.button("↩️ Desmarcar", key=f"btn_desmarcar_{conta['ID_Unico']}", use_container_width=True):
-                                if gs.atualizar_status_conta(conta['ID_Unico'], "Pendente", "", ""):
+                with st.container(key=f"btn_row_{conta.get('ID_Unico', '')}"):
+                    b1, b2, b3, b4 = st.columns(4)
+                    
+                    with b1:
+                        if st.button(texto_btn_status, key=f"btn_status_{conta.get('ID_Unico', '')}", use_container_width=True):
+                            if conta.get('Status') == 'Pendente':
+                                modal_pagar(conta.get('ID_Unico', ''), v_real)
+                            else:
+                                if gs.atualizar_status_conta(conta.get('ID_Unico', ''), "Pendente", "", ""):
                                     st.rerun()
-                    with btn_col2:
-                        if st.button("✏️ Editar", key=f"btn_edit_{conta['ID_Unico']}", use_container_width=True):
+                                    
+                    with b2:
+                        if st.button("✏️ Editar", key=f"btn_edit_{conta.get('ID_Unico', '')}", use_container_width=True):
                             modal_editar(conta)
-                    with btn_col3:
-                        if st.button("🗑️ Excluir", key=f"btn_del_{conta['ID_Unico']}", use_container_width=True):
-                            modal_excluir(conta['ID_Unico'], conta['Descricao'])
+                    
+                    with b3:
+                        if st.button("📋 Copiar", key=f"btn_copiar_{conta.get('ID_Unico', '')}", use_container_width=True):
+                            modal_copiar(conta)
+                            
+                    with b4:
+                        if st.button("🗑️ Excluir", key=f"btn_del_{conta.get('ID_Unico', '')}", use_container_width=True):
+                            modal_excluir(conta.get('ID_Unico', ''), conta.get('Descricao', ''))
 
-# --- CHAMADA DO MODAL DE FILTRO ---
-# Este trecho garante que o modal continue aberto quando as setinhas são clicadas
-if st.session_state["modal_filtro_aberto"]:
+if st.session_state.get("modal_filtro_aberto", False):
     modal_filtros()

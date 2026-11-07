@@ -62,7 +62,7 @@ def autenticar_usuario(email: str, senha: str) -> bool:
         return False
 
 # ---------------------------------------------------------------------------
-# Funções para Contas a Pagar
+# Funções para Contas a Pagar (Centavos)
 # ---------------------------------------------------------------------------
 CONTAS_WORKSHEET = "Contas"
 _contas_worksheet_cache = None
@@ -75,37 +75,79 @@ def _get_contas_ws():
         planilha = client.open_by_key(SPREADSHEET_ID)
         try:
             _contas_worksheet_cache = planilha.worksheet(CONTAS_WORKSHEET)
-            # Verifica se a coluna Banco (10) existe. Se não, adiciona.
-            headers = _contas_worksheet_cache.row_values(1)
-            if len(headers) < 10 or "Banco" not in headers:
-                _contas_worksheet_cache.resize(cols=10)
-                _contas_worksheet_cache.update_cell(1, 10, "Banco")
         except gspread.exceptions.WorksheetNotFound:
             ws = planilha.add_worksheet(title=CONTAS_WORKSHEET, rows="1000", cols="10")
-            ws.append_row(["ID_Unico", "Email", "Mes_Ref", "Descricao", "Valor", "Vencimento", "Status", "Data_Pagamento", "Observacao", "Banco"])
+            ws.append_row([
+                "ID_Unico", "Email", "Mes_Ref", "Descricao", "Valor_Centavos",
+                "Vencimento", "Status", "Data_Pagamento", "Observacao", "Banco"
+            ])
             _contas_worksheet_cache = ws
     return _contas_worksheet_cache
 
-def salvar_conta(email, mes_ref, descricao, valor, vencimento, observacao=""):
+def salvar_conta(email, mes_ref, descricao, valor_reais, vencimento, observacao=""):
     try:
         import uuid
         ws = _get_contas_ws()
         id_unico = str(uuid.uuid4())
-        ws.append_row([id_unico, email.lower(), mes_ref, descricao, float(valor), vencimento, "Pendente", "", observacao, ""])
+        valor_centavos = int(round(float(valor_reais) * 100))
+        ws.append_row(
+            [id_unico, email.lower(), mes_ref, descricao, valor_centavos, vencimento, "Pendente", "", observacao, ""],
+            value_input_option="RAW"
+        )
         return True
     except Exception as e:
         print(f"Erro ao salvar conta: {e}")
         return False
 
+def editar_conta(id_unico, descricao, valor_reais, vencimento, observacao, banco=""):
+    try:
+        ws = _get_contas_ws()
+        cell = ws.find(id_unico)
+        if cell:
+            valor_centavos = int(round(float(valor_reais) * 100))
+            ws.update_cell(cell.row, 4, descricao)
+            ws.update_cell(cell.row, 5, valor_centavos)
+            ws.update_cell(cell.row, 6, vencimento)
+            ws.update_cell(cell.row, 9, observacao)
+            ws.update_cell(cell.row, 10, banco)
+            return True
+        return False
+    except Exception as e:
+        print(f"Erro ao editar conta: {e}")
+        return False
+
+def _ler_todas_linhas(ws):
+    try:
+        valores = ws.get_all_values()
+        if not valores or len(valores) < 2:
+            return []
+        headers = valores[0]
+        resultado = []
+        for row in valores[1:]:
+            if len(row) < len(headers):
+                row = list(row) + [""] * (len(headers) - len(row))
+            reg = dict(zip(headers, row))
+            # Sempre expõe "Valor" em reais (float), a partir dos centavos
+            try:
+                v_cent = reg.get("Valor_Centavos", "0")
+                if v_cent == "" or v_cent is None:
+                    v_cent = 0
+                reg["Valor"] = float(v_cent) / 100.0
+            except Exception:
+                reg["Valor"] = 0.0
+            resultado.append(reg)
+        return resultado
+    except Exception as e:
+        print(f"Erro ao ler linhas: {e}")
+        return []
+
 def carregar_contas(email, mes_ref):
     try:
         ws = _get_contas_ws()
-        registros = ws.get_all_records()
-        contas = []
-        for reg in registros:
-            if str(reg.get("Email", "")).lower() == email.lower() and str(reg.get("Mes_Ref", "")) == mes_ref:
-                contas.append(reg)
-        return contas
+        registros = _ler_todas_linhas(ws)
+        return [r for r in registros
+                if str(r.get("Email", "")).lower() == email.lower()
+                and str(r.get("Mes_Ref", "")) == mes_ref]
     except Exception as e:
         print(f"Erro ao carregar contas: {e}")
         return []
@@ -113,12 +155,8 @@ def carregar_contas(email, mes_ref):
 def carregar_todas_contas(email):
     try:
         ws = _get_contas_ws()
-        registros = ws.get_all_records()
-        contas = []
-        for reg in registros:
-            if str(reg.get("Email", "")).lower() == email.lower():
-                contas.append(reg)
-        return contas
+        registros = _ler_todas_linhas(ws)
+        return [r for r in registros if str(r.get("Email", "")).lower() == email.lower()]
     except Exception as e:
         print(f"Erro ao carregar todas as contas: {e}")
         return []
@@ -140,7 +178,7 @@ def atualizar_status_conta(id_unico, novo_status, data_pagamento="", banco=""):
 def obter_descricoes_usuario(email):
     try:
         ws = _get_contas_ws()
-        registros = ws.get_all_records()
+        registros = _ler_todas_linhas(ws)
         descricoes = set()
         for reg in registros:
             if str(reg.get("Email", "")).lower() == email.lower():
@@ -151,22 +189,6 @@ def obter_descricoes_usuario(email):
     except Exception as e:
         print(f"Erro ao buscar descrições: {e}")
         return []
-
-def editar_conta(id_unico, descricao, valor, vencimento, observacao, banco=""):
-    try:
-        ws = _get_contas_ws()
-        cell = ws.find(id_unico)
-        if cell:
-            ws.update_cell(cell.row, 4, descricao)
-            ws.update_cell(cell.row, 5, float(valor))
-            ws.update_cell(cell.row, 6, vencimento)
-            ws.update_cell(cell.row, 9, observacao)
-            ws.update_cell(cell.row, 10, banco)
-            return True
-        return False
-    except Exception as e:
-        print(f"Erro ao editar conta: {e}")
-        return False
 
 def excluir_conta(id_unico):
     try:
