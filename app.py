@@ -1,26 +1,31 @@
 import streamlit as st
 import datetime
-import calendar
-import re
 from dateutil.relativedelta import relativedelta
 import pandas as pd
 from fpdf import FPDF
 from services import google_sheets as gs
 from decimal import Decimal, InvalidOperation
 
-# Limpa o cache a cada inicialização para evitar dados antigos
 st.cache_data.clear()
 
 st.set_page_config(page_title="Contas a Pagar", page_icon="💰", layout="centered")
 
-# CSS Básico e Cores
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .block-container { padding-top: 1rem; padding-left: 0.5rem; padding-right: 0.5rem; max-width: 600px; }
-    
+
+    /* FORÇA BORDA NOS CONTAINERS DENTRO DE MODAIS (st.dialog) */
+    div[class*="st-key-modal_box"] {
+        border: 1.2px solid #0d6efd !important;
+        border-radius: 10px !important;
+        padding: 15px !important;
+        background-color: #f8f9fa !important;
+        margin-bottom: 10px !important;
+    }
+
     /* Bordas dos inputs */
     div[data-testid="stTextInput"] > div,
     div[data-testid="stTextInput"] div[data-baseweb="base-input"],
@@ -50,7 +55,7 @@ st.markdown("""
 
     /* Barra de Ícones (Azul Claro) */
     div[class*="st-key-nav_icons"] div[data-testid="stHorizontalBlock"] {
-        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 6px !important; margin-bottom: 10px !important;
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 6px !important; margin-top: 10px !important; margin-bottom: 10px !important;
     }
     div[class*="st-key-nav_icons"] div[data-testid="stColumn"] {
         flex: 1 1 0% !important; min-width: 0 !important; padding: 0 !important;
@@ -78,15 +83,15 @@ st.markdown("""
     div[class*="st-key-nav_mes"] button * { color: white !important; }
     div[class*="st-key-nav_mes"] h4 { padding-top: 5px !important; font-size: 14px !important; }
 
-    /* Botões de Ação nos Cards (Mais finos) */
+    /* Botões de Ação nos Cards */
     div[class*="st-key-btn_row_"] div[data-testid="stHorizontalBlock"] {
-        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 2px !important;
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px !important;
     }
     div[class*="st-key-btn_row_"] div[data-testid="stColumn"] {
-        flex: 1 1 0% !important; min-width: 0 !important; padding: 0 !important;
+        min-width: 0 !important; padding: 0 !important;
     }
     div[class*="st-key-btn_row_"] button {
-        font-size: 10px !important; height: 26px !important; min-height: 26px !important;
+        font-size: 11px !important; height: 28px !important; min-height: 28px !important;
         padding: 0 !important; width: 100% !important;
         display: flex !important; align-items: center !important; justify-content: center !important;
     }
@@ -104,17 +109,6 @@ st.markdown("""
     /* Botões de Sair */
     div[class*="st-key-btn_sair"] button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
     div[class*="st-key-btn_sair"] button * { color: white !important; }
-
-    /* Botão de Download do PDF */
-    div[class*="st-key-download_pdf_relatorio"] button {
-        background-color: #fd7e14 !important; /* Laranja vibrante */
-        color: white !important;
-        border: 1px solid #fd7e14 !important;
-        font-weight: bold !important;
-        font-size: 16px !important;
-        padding: 10px !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -151,21 +145,16 @@ def parse_valor(txt):
 
 # ---------------- GERAÇÃO DE PDF ----------------
 def sanitizar_pdf(texto):
-    # Garante que caracteres especiais e acentos não quebrem o PDF
     return str(texto).encode('latin-1', 'replace').decode('latin-1')
 
 def gerar_pdf(contas, periodo_txt=""):
     pdf = FPDF()
     pdf.add_page()
-    
-    # Cabeçalho Principal
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 10, "Relatorio de Contas a Pagar", ln=True, align="C")
-    
     pdf.set_font("Arial", size=11)
     pdf.cell(0, 8, f"Referencia: {sanitizar_pdf(periodo_txt)}", ln=True, align="C")
     
-    # Cálculo dos Totais
     t_total = sum(float(c.get('Valor', 0)) for c in contas)
     t_pago = sum(float(c.get('Valor', 0)) for c in contas if c.get('Status') == 'Pago')
     t_pend = t_total - t_pago
@@ -173,32 +162,22 @@ def gerar_pdf(contas, periodo_txt=""):
     def fmt_pdf(v):
         return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-    # Exibição dos Totais Coloridos (3 colunas de 63mm cada = 189mm)
     pdf.ln(3)
     pdf.set_font("Arial", 'B', 10)
-    
-    # Total Geral (Preto)
     pdf.set_text_color(0, 0, 0)
     pdf.cell(63, 8, f"Total Geral: {fmt_pdf(t_total)}", align="C")
-    
-    # Total Pago (Verde)
     pdf.set_text_color(0, 128, 0)
     pdf.cell(63, 8, f"Total Pago: {fmt_pdf(t_pago)}", align="C")
-    
-    # Total Pendente (Vermelho)
     pdf.set_text_color(200, 0, 0)
     pdf.cell(63, 8, f"Total Pendente: {fmt_pdf(t_pend)}", align="C", ln=True)
-    
-    # Reset de cor
     pdf.set_text_color(0, 0, 0)
     
     pdf.ln(5)
     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
     pdf.ln(5)
     
-    # Cabeçalho da Tabela (Larguras: 70+25+25+22+28+20 = 190mm = alinhado com a linha)
     pdf.set_font("Arial", 'B', 9)
-    pdf.set_fill_color(230, 230, 230)  # Cinza claro
+    pdf.set_fill_color(230, 230, 230)
     pdf.cell(70, 8, "Descricao", border=1, fill=True)
     pdf.cell(25, 8, "Vencimento", border=1, fill=True, align="C")
     pdf.cell(25, 8, "Pagamento", border=1, fill=True, align="C")
@@ -207,7 +186,6 @@ def gerar_pdf(contas, periodo_txt=""):
     pdf.cell(20, 8, "Banco", border=1, fill=True, align="C")
     pdf.ln()
     
-    # Linhas da Tabela
     pdf.set_font("Arial", size=9)
     for c in contas:
         valor = float(c.get('Valor', 0))
@@ -232,13 +210,14 @@ def gerar_pdf(contas, periodo_txt=""):
 # ---------------- MODAIS ----------------
 @st.dialog("Confirmar Pagamento")
 def modal_pagar(conta_id, valor):
-    st.write(f"Deseja confirmar o pagamento de **R$ {valor:.2f}**?")
-    data_pag = st.date_input("Data do Pagamento", value=datetime.date.today(), format="DD/MM/YYYY")
-    novo_banco = st.checkbox("Cadastrar novo banco")
-    if novo_banco:
-        banco_final = st.text_input("Digite o nome do banco")
-    else:
-        banco_final = st.selectbox("Banco utilizado", BANCOS)
+    with st.container(key="modal_box"):
+        st.write(f"Deseja confirmar o pagamento de **R$ {valor:.2f}**?")
+        data_pag = st.date_input("Data do Pagamento", value=datetime.date.today(), format="DD/MM/YYYY")
+        novo_banco = st.checkbox("Cadastrar novo banco")
+        if novo_banco:
+            banco_final = st.text_input("Digite o nome do banco")
+        else:
+            banco_final = st.selectbox("Banco utilizado", BANCOS)
     if st.button("Confirmar e Pagar", type="primary", use_container_width=True):
         if gs.atualizar_status_conta(conta_id, "Pago", data_pag.strftime("%d/%m/%Y"), banco_final):
             st.rerun()
@@ -247,24 +226,27 @@ def modal_pagar(conta_id, valor):
 def modal_adicionar():
     sugestoes = gs.obter_descricoes_usuario(st.session_state["usuario"])
     nova_conta = st.checkbox("Cadastrar nova conta")
-    if nova_conta:
-        desc = st.text_input("Digite o nome da nova conta")
-    else:
-        if not sugestoes:
-            st.warning("Nenhuma conta cadastrada. Marque a caixa acima para criar a primeira.")
-            desc = ""
-        else:
-            desc = st.selectbox("Selecione uma conta", sugestoes)
     
-    col_val, col_venc = st.columns(2)
-    with col_val:
-        val_str = st.text_input("Valor (R$)", placeholder="0,00")
-    with col_venc:
-        proximo_mes = st.session_state["mes_atual"] + relativedelta(months=1)
-        ultimo_dia = proximo_mes - datetime.timedelta(days=1)
-        venc = st.date_input("Vencimento", value=ultimo_dia, format="DD/MM/YYYY")
+    with st.container(key="modal_box"):
+        if nova_conta:
+            desc = st.text_input("Digite o nome da nova conta")
+        else:
+            if not sugestoes:
+                st.warning("Nenhuma conta cadastrada. Marque a caixa acima para criar a primeira.")
+                desc = ""
+            else:
+                desc = st.selectbox("Selecione uma conta", sugestoes)
         
-    obs = st.text_input("Observação (Opcional)")
+        col_val, col_venc = st.columns(2)
+        with col_val:
+            val_str = st.text_input("Valor (R$)", placeholder="0,00")
+        with col_venc:
+            proximo_mes = st.session_state["mes_atual"] + relativedelta(months=1)
+            ultimo_dia = proximo_mes - datetime.timedelta(days=1)
+            venc = st.date_input("Vencimento", value=ultimo_dia, format="DD/MM/YYYY")
+            
+        obs = st.text_input("Observação (Opcional)")
+    
     mes_busca = st.session_state["mes_atual"].strftime("%Y-%m")
     
     if st.button("Salvar Conta", type="primary", use_container_width=True):
@@ -283,26 +265,28 @@ def modal_adicionar():
 @st.dialog("Editar Conta")
 def modal_editar(conta):
     st.markdown(f"**Editando:** {conta.get('Descricao', '')}")
-    col_val, col_venc = st.columns(2)
-    with col_val:
-        val_atual = float(conta.get('Valor', 0))
-        val_str_atual = f"{val_atual:.2f}".replace(".", ",")
-        val_str = st.text_input("Valor (R$)", value=val_str_atual)
-    with col_venc:
-        data_venc_obj = datetime.datetime.strptime(conta.get('Vencimento', ''), "%d/%m/%Y").date()
-        novo_venc = st.date_input("Vencimento", value=data_venc_obj, format="DD/MM/YYYY")
-    banco_salvo = conta.get('Banco', '')
-    if banco_salvo and banco_salvo not in BANCOS:
-        novo_banco = st.checkbox("Cadastrar novo banco", value=True)
-        banco_final = st.text_input("Digite o nome do banco", value=banco_salvo)
-    else:
-        novo_banco = st.checkbox("Cadastrar novo banco")
-        if novo_banco:
-            banco_final = st.text_input("Digite o nome do banco")
+    
+    with st.container(key="modal_box"):
+        col_val, col_venc = st.columns(2)
+        with col_val:
+            val_atual = float(conta.get('Valor', 0))
+            val_str_atual = f"{val_atual:.2f}".replace(".", ",")
+            val_str = st.text_input("Valor (R$)", value=val_str_atual)
+        with col_venc:
+            data_venc_obj = datetime.datetime.strptime(conta.get('Vencimento', ''), "%d/%m/%Y").date()
+            novo_venc = st.date_input("Vencimento", value=data_venc_obj, format="DD/MM/YYYY")
+        banco_salvo = conta.get('Banco', '')
+        if banco_salvo and banco_salvo not in BANCOS:
+            novo_banco = st.checkbox("Cadastrar novo banco", value=True)
+            banco_final = st.text_input("Digite o nome do banco", value=banco_salvo)
         else:
-            idx_banco = BANCOS.index(banco_salvo) if banco_salvo in BANCOS else 0
-            banco_final = st.selectbox("Banco utilizado", BANCOS, index=idx_banco)
-    nova_obs = st.text_input("Observação", value=conta.get('Observacao', ''))
+            novo_banco = st.checkbox("Cadastrar novo banco")
+            if novo_banco:
+                banco_final = st.text_input("Digite o nome do banco")
+            else:
+                idx_banco = BANCOS.index(banco_salvo) if banco_salvo in BANCOS else 0
+                banco_final = st.selectbox("Banco utilizado", BANCOS, index=idx_banco)
+        nova_obs = st.text_input("Observação", value=conta.get('Observacao', ''))
     
     if st.button("Salvar Alterações", type="primary", use_container_width=True):
         try:
@@ -347,32 +331,33 @@ def modal_configuracoes():
     st.divider()
     tab_sobre, tab_como, tab_creditos = st.tabs(["Sobre", "Como Usar", "Tecnologias"])
     with tab_sobre:
-        st.markdown("### 💰 Contas a Pagar JEN\n**Versão:** 1.2\nO melhor gerenciador de contas pessoais. Organize seus pagamentos, acompanhe seus gastos e nunca perca um vencimento.")
+        st.markdown("### 💰 Contas a Pagar JEN\n**Versão:** 1.2\nO melhor gerenciador de contas pessoais.")
     with tab_como:
-        st.markdown("1. Adicione contas clicando no botão **➕**.\n2. Marque como pagas clicando no botão de status no card.\n3. Use os filtros **🔍** para achar contas antigas por período ou banco.")
+        st.markdown("1. Adicione contas no botão **➕**.\n2. Marque como pagas no botão de status.\n3. Use os filtros **🔍**.")
     with tab_creditos:
-        st.markdown("**Desenvolvido por:** João Evangelista Neto\n**Tecnologias:** Streamlit, Pandas, Google Sheets API.\n**Objetivo:** Facilitar a gestão financeira pessoal.")
+        st.markdown("**Desenvolvido por:** João Evangelista Neto\n**Tecnologias:** Streamlit, Pandas, Google Sheets API.")
 
 @st.dialog("🔍 Filtros Avançados")
 def modal_filtros():
-    sugestoes = gs.obter_descricoes_usuario(st.session_state["usuario"])
-    f_desc = st.selectbox("Descrição", [""] + sugestoes)
-    
-    hoje = datetime.date.today()
-    primeiro_dia_mes = hoje.replace(day=1)
-    
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        f_data_ini = st.date_input("Data Inicial", value=primeiro_dia_mes, format="DD/MM/YYYY", key="f_ini")
-    with col_f2:
-        f_data_fim = st.date_input("Data Final", value=hoje, format="DD/MM/YYYY", key="f_fim")
+    with st.container(key="modal_box"):
+        sugestoes = gs.obter_descricoes_usuario(st.session_state["usuario"])
+        f_desc = st.selectbox("Descrição", [""] + sugestoes)
         
-    col_f3, col_f4 = st.columns(2)
-    with col_f3:
-        f_banco = st.selectbox("Banco", ["Todos"] + BANCOS[1:])
-    with col_f4:
-        f_status = st.selectbox("Status", ["Todos", "Pago", "Pendente"])
+        hoje = datetime.date.today()
+        primeiro_dia_mes = hoje.replace(day=1)
         
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            f_data_ini = st.date_input("Data Inicial", value=primeiro_dia_mes, format="DD/MM/YYYY", key="f_ini")
+        with col_f2:
+            f_data_fim = st.date_input("Data Final", value=hoje, format="DD/MM/YYYY", key="f_fim")
+            
+        col_f3, col_f4 = st.columns(2)
+        with col_f3:
+            f_banco = st.selectbox("Banco", ["Todos"] + BANCOS[1:])
+        with col_f4:
+            f_status = st.selectbox("Status", ["Todos", "Pago", "Pendente"])
+    
     st.write("")
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
@@ -421,73 +406,15 @@ if not st.session_state["logado"]:
             else: st.error("E-mail já cadastrado.")
     st.stop()
 
-# ---------------- TELA PRINCIPAL ----------------
-
-if not st.session_state["filtro_ativo"]:
-    with st.container(key="nav_mes"):
-        col_prev, col_titulo, col_next = st.columns([1, 2, 1])
-        with col_prev:
-            if st.button("◀ Anterior", key="btn_prev", use_container_width=True):
-                st.session_state["mes_atual"] -= relativedelta(months=1)
-                st.rerun()
-        with col_titulo:
-            st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 14px; color: #0d6efd; font-weight: bold; padding-top: 6px;'>{obter_nome_mes_atual()}</h4>", unsafe_allow_html=True)
-        with col_next:
-            if st.button("Próximo ▶", key="btn_next", use_container_width=True):
-                st.session_state["mes_atual"] += relativedelta(months=1)
-                st.rerun()
-else:
-    col_info, col_btn_clear = st.columns([2, 1])
-    with col_info:
-        st.info("🔍 Filtros Ativos")
-    with col_btn_clear:
-        if st.button("❌ Limpar", use_container_width=True, key="btn_limpar_topo"):
-            st.session_state["filtro_ativo"] = False
-            st.session_state["f_desc"] = None
-            st.session_state["f_data_ini"] = None
-            st.session_state["f_data_fim"] = None
-            st.session_state["f_banco"] = None
-            st.session_state["f_status"] = None
-            st.rerun()
-
-st.write("")
-
-with st.container(key="nav_icons"):
-    c1, c2, c3, c4, c5 = st.columns(5)
-    with c1:
-        if st.button("👤", use_container_width=True, help="Ajuda e Configurações"):
-            modal_configuracoes()
-    with c2:
-        if st.button("➕", use_container_width=True, key="btn_add", help="Adicionar Conta"):
-            modal_adicionar()
-    with c3:
-        if st.button("🔍", use_container_width=True, help="Filtros"):
-            st.session_state["modal_filtro_aberto"] = True
-            st.rerun()
-    with c4:
-        icones = {"padrao": "↕️", "pago": "⬆️", "pendente": "⬇️"}
-        estado = st.session_state["ordenacao_cards"]
-        if st.button(icones[estado], use_container_width=True, key="btn_order", help="Ordenar"):
-            proximo = {"padrao": "pago", "pago": "pendente", "pendente": "padrao"}
-            st.session_state["ordenacao_cards"] = proximo[estado]
-            st.rerun()
-    with c5:
-        if st.button("📊", use_container_width=True, help="Relatório PDF"):
-            st.session_state["_gerar_relatorio"] = True
-            st.rerun()
-
-st.write("")
-
+# ---------------- LÓGICA DE DADOS ----------------
 if st.session_state["filtro_ativo"]:
     todas_contas = gs.carregar_todas_contas(st.session_state["usuario"])
     if not todas_contas:
         contas_exibicao = []
     else:
         df = pd.DataFrame(todas_contas)
-        # Garante que a coluna Valor exista no DataFrame
         if 'Valor' not in df.columns:
             df['Valor'] = 0.0
-            
         df['Data_Venc_Obj'] = pd.to_datetime(df['Vencimento'], format='%d/%m/%Y', errors='coerce')
         if st.session_state.get("f_desc") and st.session_state["f_desc"] != "":
             df = df[df['Descricao'].str.contains(st.session_state["f_desc"], case=False, na=False)]
@@ -516,7 +443,6 @@ elif modo == "pago":
 else:
     contas_exibicao = sorted(contas_exibicao, key=lambda c: (0 if c.get('Status') == 'Pendente' else 1, _parse_data(c.get('Vencimento', ''))))
 
-# Totais BLINDADOS
 total_mes = sum(float(c.get('Valor', 0)) for c in contas_exibicao)
 total_pago = sum(float(c.get('Valor', 0)) for c in contas_exibicao if c.get('Status') == 'Pago')
 total_pendente = total_mes - total_pago
@@ -524,10 +450,90 @@ total_pendente = total_mes - total_pago
 def fmt_moeda(v):
     return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+# ---------------- TELA PRINCIPAL ----------------
+
+# Bloco único com borda
+with st.container(border=True):
+    
+    # 1. Navegação do Mês
+    if not st.session_state["filtro_ativo"]:
+        with st.container(key="nav_mes"):
+            col_prev, col_titulo, col_next = st.columns([1, 2, 1])
+            with col_prev:
+                if st.button("◀ Anterior", key="btn_prev", use_container_width=True):
+                    st.session_state["mes_atual"] -= relativedelta(months=1)
+                    st.rerun()
+            with col_titulo:
+                st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 14px; color: #0d6efd; font-weight: bold; padding-top: 6px;'>{obter_nome_mes_atual()}</h4>", unsafe_allow_html=True)
+            with col_next:
+                if st.button("Próximo ▶", key="btn_next", use_container_width=True):
+                    st.session_state["mes_atual"] += relativedelta(months=1)
+                    st.rerun()
+    else:
+        col_info, col_btn_clear = st.columns([2, 1])
+        with col_info:
+            st.info("🔍 Filtros Ativos")
+        with col_btn_clear:
+            if st.button("❌ Limpar", use_container_width=True, key="btn_limpar_topo"):
+                st.session_state["filtro_ativo"] = False
+                st.session_state["f_desc"] = None
+                st.session_state["f_data_ini"] = None
+                st.session_state["f_data_fim"] = None
+                st.session_state["f_banco"] = None
+                st.session_state["f_status"] = None
+                st.rerun()
+
+    # 2. Barra de Ícones
+    with st.container(key="nav_icons"):
+        c1, c2, c3, c4, c5 = st.columns(5)
+        with c1:
+            if st.button("👤", use_container_width=True, help="Ajuda e Configurações"):
+                modal_configuracoes()
+        with c2:
+            if st.button("➕", use_container_width=True, key="btn_add", help="Adicionar Conta"):
+                modal_adicionar()
+        with c3:
+            if st.button("🔍", use_container_width=True, help="Filtros"):
+                st.session_state["modal_filtro_aberto"] = True
+                st.rerun()
+        with c4:
+            icones = {"padrao": "↕️", "pago": "⬆️", "pendente": "⬇️"}
+            estado = st.session_state["ordenacao_cards"]
+            if st.button(icones[estado], use_container_width=True, key="btn_order", help="Ordenar"):
+                proximo = {"padrao": "pago", "pago": "pendente", "pendente": "padrao"}
+                st.session_state["ordenacao_cards"] = proximo[estado]
+                st.rerun()
+        with c5:
+            if st.button("📊", use_container_width=True, help="Relatório PDF"):
+                st.session_state["_gerar_relatorio"] = True
+                st.rerun()
+
+    # 3. Totais / Cards de Resumo
+    st.markdown(f"""
+    <div style="display: flex; justify-content: space-between; gap: 8px; margin-top: 5px;">
+        <div style="flex: 1; background: #e3f2fd; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #b6d4fe;">
+            <div style="font-size: 10px; color: #0d6efd; font-weight: 700; text-transform: uppercase;">A Pagar</div>
+            <div style="font-size: 15px; font-weight: 800; color: #0d6efd;">{fmt_moeda(total_mes)}</div>
+        </div>
+        <div style="flex: 1; background: #d4edda; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #c3e6cb;">
+            <div style="font-size: 10px; color: #155724; font-weight: 700; text-transform: uppercase;">Pago</div>
+            <div style="font-size: 15px; font-weight: 800; color: #155724;">{fmt_moeda(total_pago)}</div>
+        </div>
+        <div style="flex: 1; background: #fff3cd; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #ffe69c;">
+            <div style="font-size: 10px; color: #856404; font-weight: 700; text-transform: uppercase;">Pendente</div>
+            <div style="font-size: 15px; font-weight: 800; color: #856404;">{fmt_moeda(total_pendente)}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 🎯 ESPAÇO FALSO EM BRANCO PARA DAR RESPIRO ANTES DA BORDA
+    st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+
+# --- FIM DO BLOCO COM BORDA ---
+
+# Ação do Botão de Relatório
 if st.session_state.get("_gerar_relatorio", False):
     st.session_state["_gerar_relatorio"] = False
-    
-    # Define o texto de referência baseado no filtro ou no mês atual
     if st.session_state["filtro_ativo"]:
         data_i = st.session_state.get("f_data_ini")
         data_f = st.session_state.get("f_data_fim")
@@ -536,7 +542,6 @@ if st.session_state.get("_gerar_relatorio", False):
         periodo_txt = obter_nome_mes_atual()
         
     pdf_bytes = gerar_pdf(contas_exibicao, periodo_txt)
-    
     st.download_button(
         label="📥 Clique aqui para baixar o Relatório em PDF", 
         data=pdf_bytes, 
@@ -546,29 +551,14 @@ if st.session_state.get("_gerar_relatorio", False):
         use_container_width=True
     )
 
-st.markdown(f"""
-<div style="display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px;">
-    <div style="flex: 1; background: #e3f2fd; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #b6d4fe;">
-        <div style="font-size: 10px; color: #0d6efd; font-weight: 700; text-transform: uppercase;">A Pagar</div>
-        <div style="font-size: 15px; font-weight: 800; color: #0d6efd;">{fmt_moeda(total_mes)}</div>
-    </div>
-    <div style="flex: 1; background: #d4edda; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #c3e6cb;">
-        <div style="font-size: 10px; color: #155724; font-weight: 700; text-transform: uppercase;">Pago</div>
-        <div style="font-size: 15px; font-weight: 800; color: #155724;">{fmt_moeda(total_pago)}</div>
-    </div>
-    <div style="flex: 1; background: #fff3cd; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #ffe69c;">
-        <div style="font-size: 10px; color: #856404; font-weight: 700; text-transform: uppercase;">Pendente</div>
-        <div style="font-size: 15px; font-weight: 800; color: #856404;">{fmt_moeda(total_pendente)}</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+st.write("")
 
+# Cards List
 with st.container(height=500, border=False):
     if not contas_exibicao:
         st.info("Nenhuma conta encontrada.")
     else:
         for conta in contas_exibicao:
-            # Blindagem total do valor
             v_real = float(conta.get('Valor', 0))
             valor_fmt = fmt_moeda(v_real)
             
@@ -576,16 +566,15 @@ with st.container(height=500, border=False):
                 bg_color, border_color = "#d4edda", "#198754"
                 btn_bg, btn_border = "#198754", "#198754"
                 selo = '<span style="background:#198754; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>'
-                texto_btn_status = "🟢 Pago"
+                texto_btn_status = "↩️ Desmarcar"
             else:
                 bg_color, border_color = "#f8d7da", "#dc3545"
                 btn_bg, btn_border = "#dc3545", "#dc3545"
                 selo = '<span style="background:#dc3545; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'
-                texto_btn_status = "🟡 Pagar"
+                texto_btn_status = "✅ Pagar"
                 
             st.markdown(f"""
             <style>
-                      
             div[class*="st-key-card_{conta.get('ID_Unico', '')}"] {{
                 background-color: {bg_color} !important;
                 border: 1.5px solid {border_color} !important;
@@ -604,15 +593,22 @@ with st.container(height=500, border=False):
             """, unsafe_allow_html=True)
             
             with st.container(key=f"card_{conta.get('ID_Unico', '')}"):
-                ref_txt = f" | Ref: {conta.get('Mes_Ref', '')}" if st.session_state["filtro_ativo"] else ""
+                ref_txt = ""
+                if st.session_state["filtro_ativo"]:
+                    m_ref = conta.get('Mes_Ref', '')
+                    if "-" in m_ref:
+                        y, m = m_ref.split("-")
+                        ref_txt = f" | Ref: {m}/{y}"
+                    else:
+                        ref_txt = f" | Ref: {m_ref}"
                 
                 st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;'><div style='font-weight: 700; font-size: 16px; color: #000;'>{conta.get('Descricao', '')}{ref_txt}</div><div style='font-weight: 700; font-size: 16px; color: #0d6efd;'>{valor_fmt}</div></div>", unsafe_allow_html=True)
                 
-                bloco_esq = f"<div style='font-size: 12px; color: #000;'>📅 Vence: <b>{conta.get('Vencimento', '')}</b></div>"
+                bloco_esq = f"<div style='font-size: 14px; color: #000;'>📅 Vence: <b>{conta.get('Vencimento', '')}</b></div>"
                 if conta.get('Status') == 'Pago' and conta.get('Data_Pagamento'):
-                    bloco_esq += f"<div style='font-size: 12px; color: #000;'>💵 Pago em: <b>{conta.get('Data_Pagamento', '')}</b></div>"
+                    bloco_esq += f"<div style='font-size: 14px; color: #000; margin-top: 2px;'>💵 Pago em: <b>{conta.get('Data_Pagamento', '')}</b></div>"
                     if conta.get('Banco'):
-                        bloco_esq += f"<div style='font-size: 12px; color: #000;'>🏦 Banco: <b>{conta.get('Banco', '')}</b></div>"
+                        bloco_esq += f"<div style='font-size: 12px; color: #000; margin-top: 2px;'>🏦 Banco: <b>{conta.get('Banco', '')}</b></div>"
                 
                 bloco_dir = f"<div style='text-align: right;'><div style='font-size: 9px; color: #333; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px;'>STATUS</div><div>{selo}</div></div>"
                 
@@ -624,7 +620,7 @@ with st.container(height=500, border=False):
                 st.write("")
                 
                 with st.container(key=f"btn_row_{conta.get('ID_Unico', '')}"):
-                    b1, b2, b3, b4 = st.columns(4)
+                    b1, b2, b3, b4 = st.columns([2.5, 1, 1, 1])
                     
                     with b1:
                         if st.button(texto_btn_status, key=f"btn_status_{conta.get('ID_Unico', '')}", use_container_width=True):
@@ -635,15 +631,15 @@ with st.container(height=500, border=False):
                                     st.rerun()
                                     
                     with b2:
-                        if st.button("✏️ Editar", key=f"btn_edit_{conta.get('ID_Unico', '')}", use_container_width=True):
+                        if st.button("✏️", key=f"btn_edit_{conta.get('ID_Unico', '')}", use_container_width=True, help="Editar"):
                             modal_editar(conta)
                     
                     with b3:
-                        if st.button("📋 Copiar", key=f"btn_copiar_{conta.get('ID_Unico', '')}", use_container_width=True):
+                        if st.button("📋", key=f"btn_copiar_{conta.get('ID_Unico', '')}", use_container_width=True, help="Copiar"):
                             modal_copiar(conta)
                             
                     with b4:
-                        if st.button("🗑️ Excluir", key=f"btn_del_{conta.get('ID_Unico', '')}", use_container_width=True):
+                        if st.button("🗑️", key=f"btn_del_{conta.get('ID_Unico', '')}", use_container_width=True, help="Excluir"):
                             modal_excluir(conta.get('ID_Unico', ''), conta.get('Descricao', ''))
 
 if st.session_state.get("modal_filtro_aberto", False):
