@@ -1,0 +1,40 @@
+name: Keep Alive
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # A cada 6 horas
+  workflow_dispatch:
+
+jobs:
+  visit-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar Playwright
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install chromium
+
+      - name: Visitar o app Streamlit
+        env:
+          STREAMLIT_URL: "https://contas-jen.streamlit.app/"
+        run: |
+          python -c "
+          from playwright.sync_api import sync_playwright
+          import os, time
+          url = os.environ['STREAMLIT_URL']
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              page = browser.new_page()
+              page.goto(url, timeout=60000)
+              time.sleep(15)
+              # Clica no botão 'Yes, get this app back up!' se estiver dormindo
+              try:
+                  btn = page.get_by_text('Yes, get this app back up!')
+                  if btn.is_visible():
+                      btn.click()
+                      time.sleep(30)
+              except:
+                  pass
+              browser.close()
+          "
