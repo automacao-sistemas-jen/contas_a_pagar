@@ -173,24 +173,38 @@ def gerar_pdf(contas, periodo_txt=""):
     def fmt_pdf(v):
         return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-    # Exibição dos Totais no Topo
+    # Exibição dos Totais Coloridos (3 colunas de 63mm cada = 189mm)
+    pdf.ln(3)
     pdf.set_font("Arial", 'B', 10)
-    pdf.cell(0, 8, f"Total Geral: {fmt_pdf(t_total)}   |   Total Pago: {fmt_pdf(t_pago)}   |   Total Pendente: {fmt_pdf(t_pend)}", ln=True, align="C")
+    
+    # Total Geral (Preto)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(63, 8, f"Total Geral: {fmt_pdf(t_total)}", align="C")
+    
+    # Total Pago (Verde)
+    pdf.set_text_color(0, 128, 0)
+    pdf.cell(63, 8, f"Total Pago: {fmt_pdf(t_pago)}", align="C")
+    
+    # Total Pendente (Vermelho)
+    pdf.set_text_color(200, 0, 0)
+    pdf.cell(63, 8, f"Total Pendente: {fmt_pdf(t_pend)}", align="C", ln=True)
+    
+    # Reset de cor
+    pdf.set_text_color(0, 0, 0)
     
     pdf.ln(5)
     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
     pdf.ln(5)
     
-    # Cabeçalho da Tabela
+    # Cabeçalho da Tabela (Larguras: 70+25+25+22+28+20 = 190mm = alinhado com a linha)
     pdf.set_font("Arial", 'B', 9)
-    pdf.set_fill_color(230, 230, 230) # Fundo cinza claro para o cabeçalho
-    # Larguras: Desc(55), Venc(25), Pag(25), Status(22), Valor(25), Banco(18) = 170
-    pdf.cell(55, 8, "Descricao", border=1, fill=True)
-    pdf.cell(25, 8, "Vencimento", border=1, fill=True)
-    pdf.cell(25, 8, "Pagamento", border=1, fill=True)
-    pdf.cell(22, 8, "Status", border=1, fill=True)
-    pdf.cell(25, 8, "Valor", border=1, fill=True)
-    pdf.cell(18, 8, "Banco", border=1, fill=True)
+    pdf.set_fill_color(230, 230, 230)  # Cinza claro
+    pdf.cell(70, 8, "Descricao", border=1, fill=True)
+    pdf.cell(25, 8, "Vencimento", border=1, fill=True, align="C")
+    pdf.cell(25, 8, "Pagamento", border=1, fill=True, align="C")
+    pdf.cell(22, 8, "Status", border=1, fill=True, align="C")
+    pdf.cell(28, 8, "Valor", border=1, fill=True, align="C")
+    pdf.cell(20, 8, "Banco", border=1, fill=True, align="C")
     pdf.ln()
     
     # Linhas da Tabela
@@ -198,20 +212,20 @@ def gerar_pdf(contas, periodo_txt=""):
     for c in contas:
         valor = float(c.get('Valor', 0))
         val_fmt = fmt_pdf(valor)
-        desc = sanitizar_pdf(c.get('Descricao', ''))[:28]
+        desc = sanitizar_pdf(c.get('Descricao', ''))[:38]
         venc = sanitizar_pdf(c.get('Vencimento', ''))
         pag = sanitizar_pdf(c.get('Data_Pagamento', '-')) if c.get('Data_Pagamento') else '-'
         status = sanitizar_pdf(c.get('Status', ''))
-        banco = sanitizar_pdf(c.get('Banco', ''))[:12]
+        banco = sanitizar_pdf(c.get('Banco', ''))[:14]
         
-        pdf.cell(55, 8, desc, border=1)
+        pdf.cell(70, 8, desc, border=1)
         pdf.cell(25, 8, venc, border=1, align="C")
         pdf.cell(25, 8, pag, border=1, align="C")
         pdf.cell(22, 8, status, border=1, align="C")
-        pdf.cell(25, 8, val_fmt, border=1, align="R")
-        pdf.cell(18, 8, banco, border=1)
+        pdf.cell(28, 8, val_fmt, border=1, align="R")
+        pdf.cell(20, 8, banco, border=1)
         pdf.ln()
-        
+    
     pdf.ln(5)
     return bytes(pdf.output())
 
