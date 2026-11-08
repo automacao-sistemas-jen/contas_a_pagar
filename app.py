@@ -5,10 +5,18 @@ import pandas as pd
 from fpdf import FPDF
 from services import google_sheets as gs
 from decimal import Decimal, InvalidOperation
+import base64
 
 st.cache_data.clear()
 
 st.set_page_config(page_title="Contas a Pagar", page_icon="💰", layout="centered")
+
+# Carrega o Logo
+try:
+    with open("static/logo_contas.png", "rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode()
+except FileNotFoundError:
+    img_b64 = ""
 
 st.markdown("""
 <style>
@@ -57,6 +65,15 @@ st.markdown("""
         border: none !important;
         box-shadow: none !important;
     }
+
+    /* Botão Download PDF (Destaque Laranja) */
+    div.stDownloadButton button {
+        background-color: #fd7e14 !important;
+        border: 1px solid #fd7e14 !important;
+        color: white !important;
+        font-weight: bold !important;
+    }
+    div.stDownloadButton button * { color: white !important; }
 
     div[class*="st-key-nav_icons"] div[data-testid="stHorizontalBlock"] {
         display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 6px !important; margin-top: 10px !important; margin-bottom: 10px !important;
@@ -239,6 +256,7 @@ def modal_pagar(conta_id, valor):
             banco_final = st.selectbox("Banco utilizado", BANCOS)
     if st.button("Confirmar e Pagar", type="primary", use_container_width=True):
         if gs.atualizar_status_conta(conta_id, "Pago", data_pag.strftime("%d/%m/%Y"), banco_final):
+            st.session_state["modal_filtro_aberto"] = False
             st.rerun()
 
 @st.dialog(f"Nova Conta para {obter_nome_mes_atual()}")
@@ -275,6 +293,7 @@ def modal_adicionar():
                 st.error("Por favor, preencha ou selecione uma conta.")
             else:
                 if gs.salvar_conta(st.session_state["usuario"], mes_busca, desc, val_final, venc.strftime("%d/%m/%Y"), obs):
+                    st.session_state["modal_filtro_aberto"] = False
                     st.rerun()
                 else:
                     st.error("Não foi possível salvar a conta.")
@@ -311,6 +330,7 @@ def modal_editar(conta):
         try:
             val_final = parse_valor(val_str)
             if gs.editar_conta(conta.get('ID_Unico'), conta.get('Descricao', ''), val_final, novo_venc.strftime("%d/%m/%Y"), nova_obs, banco_final):
+                st.session_state["modal_filtro_aberto"] = False
                 st.rerun()
             else:
                 st.error("Não foi possível salvar as alterações.")
@@ -332,6 +352,7 @@ def modal_copiar(conta):
                 nova_data_venc = data_venc_obj + relativedelta(months=i)
                 gs.salvar_conta(st.session_state["usuario"], mes_busca, conta.get('Descricao', ''), valor, nova_data_venc.strftime("%d/%m/%Y"), conta.get('Observacao', ''))
             st.success("Copiado com sucesso!")
+            st.session_state["modal_filtro_aberto"] = False
             st.rerun()
 
 @st.dialog("Excluir Conta")
@@ -339,6 +360,7 @@ def modal_excluir(conta_id, descricao):
     st.warning(f"Tem certeza que deseja excluir a conta **{descricao}**?")
     if st.button("Sim, Excluir", type="primary", use_container_width=True):
         if gs.excluir_conta(conta_id):
+            st.session_state["modal_filtro_aberto"] = False
             st.rerun()
 
 @st.dialog("⚙️ Configurações e Ajuda")
@@ -362,7 +384,7 @@ def modal_configuracoes():
         st.markdown("Conheça as funcionalidades de cada botão:")
         st.markdown("**➕ Adicionar:** Inclui uma nova conta no mês selecionado ou em meses futuros.")
         st.markdown("**🔍 Filtros:** Pesquisa contas em qualquer período, banco, status ou descrição.")
-        st.markdown("**⇧ Ordenar:** Alterna entre Pagos no topo (botão verde) e Pendentes no topo (botão vermelho). A preferência é salva automaticamente.")
+        st.markdown("**⇧ Ordenar:** Alterna entre Pagos no topo e Pendentes no topo. A preferência é salva.")
         st.markdown("**📊 Relatório:** Gera um PDF completo com as contas exibidas na tela.")
         st.markdown("**Marcar Pago/Desmarcar:** Altera o status da conta e registra a data e banco de pagamento.")
         st.markdown("**Editar:** Modifica o valor, vencimento, banco ou observação de uma conta.")
@@ -424,7 +446,16 @@ def modal_filtros():
 
 # ---------------- TELA DE LOGIN ----------------
 if not st.session_state["logado"]:
-    st.markdown("<h2 style='text-align: center;'>💰 Contas a Pagar</h2>", unsafe_allow_html=True)
+    if img_b64:
+        st.markdown(f"""
+        <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px; margin-top: 20px;">
+            <img src="data:image/png;base64,{img_b64}" height="60" style="border-radius: 10px;">
+            <h2 style="margin: 0; color: #333;">Contas a Pagar</h2>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("<h2 style='text-align: center;'>💰 Contas a Pagar</h2>", unsafe_allow_html=True)
+        
     tab_login, tab_cadastro = st.tabs(["🔒 Login", "📝 Criar Conta"])
     with tab_login:
         email = st.text_input("E-mail", key="login_email")
@@ -492,16 +523,24 @@ def fmt_moeda(v):
 
 # ---------------- TELA PRINCIPAL ----------------
 
-# CSS dinâmico para o botão de ordenação
-cor_order = "#198754" if ordem == "pago" else "#dc3545"
+# CSS dinâmico para o botão de ordenação (Cores Suaves)
+if ordem == "pago":
+    bg_order = "#d4edda"
+    border_order = "#c3e6cb"
+    text_order = "#155724"
+else:
+    bg_order = "#f8d7da"
+    border_order = "#f5c6cb"
+    text_order = "#721c24"
+
 st.markdown(f"""
 <style>
 div[class*="st-key-nav_icons"] div[class*="st-key-btn_order"] button {{
-    background-color: {cor_order} !important;
-    border-color: {cor_order} !important;
+    background-color: {bg_order} !important;
+    border-color: {border_order} !important;
 }}
 div[class*="st-key-nav_icons"] div[class*="st-key-btn_order"] button * {{
-    color: white !important;
+    color: {text_order} !important;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -514,12 +553,14 @@ with st.container(key="main_box"):
             with col_prev:
                 if st.button("◀ Anterior", key="btn_prev", use_container_width=True):
                     st.session_state["mes_atual"] -= relativedelta(months=1)
+                    st.session_state["modal_filtro_aberto"] = False
                     st.rerun()
             with col_titulo:
                 st.markdown(f"<h4 style='text-align: center; margin: 0; font-size: 14px; color: #0d6efd; font-weight: bold; padding-top: 6px;'>{obter_nome_mes_atual()}</h4>", unsafe_allow_html=True)
             with col_next:
                 if st.button("Próximo ▶", key="btn_next", use_container_width=True):
                     st.session_state["mes_atual"] += relativedelta(months=1)
+                    st.session_state["modal_filtro_aberto"] = False
                     st.rerun()
     else:
         col_info, col_btn_clear = st.columns([2, 1])
@@ -533,6 +574,7 @@ with st.container(key="main_box"):
                 st.session_state["f_data_fim"] = None
                 st.session_state["f_banco"] = None
                 st.session_state["f_status"] = None
+                st.session_state["modal_filtro_aberto"] = False
                 st.rerun()
 
     with st.container(key="nav_icons"):
@@ -548,14 +590,15 @@ with st.container(key="main_box"):
                 st.session_state["modal_filtro_aberto"] = True
                 st.rerun()
         with c4:
-            # Botão de ordenação único: muda entre pago/pendente
-            if st.button("⇧", use_container_width=True, key="btn_order", help="Alternar Ordenação (Pago/Pendente no Topo)"):
+            if st.button("⇧", use_container_width=True, key="btn_order", help="Alternar Ordenação"):
                 st.session_state["ordem_padrao"] = "pendente" if ordem == "pago" else "pago"
                 gs.salvar_preferencia_ordem(st.session_state["usuario"], st.session_state["ordem_padrao"])
+                st.session_state["modal_filtro_aberto"] = False
                 st.rerun()
         with c5:
             if st.button("📊", use_container_width=True, help="Relatório PDF"):
                 st.session_state["_gerar_relatorio"] = True
+                st.session_state["modal_filtro_aberto"] = False
                 st.rerun()
 
     st.markdown(f"""
@@ -672,6 +715,7 @@ with st.container(height=500, border=False):
                                 modal_pagar(conta.get('ID_Unico', ''), v_real)
                             else:
                                 if gs.atualizar_status_conta(conta.get('ID_Unico', ''), "Pendente", "", ""):
+                                    st.session_state["modal_filtro_aberto"] = False
                                     st.rerun()
                                     
                     with b2:
