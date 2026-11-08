@@ -17,6 +17,14 @@ st.markdown("""
     header {visibility: hidden;}
     .block-container { padding-top: 1rem; padding-left: 0.5rem; padding-right: 0.5rem; max-width: 600px; }
 
+    /* 🎯 FORÇANDO A BORDA AZUL NO CONTAINER PRINCIPAL VIA KEY */
+    div[class*="st-key-main_box"] {
+        border: 2px solid #0d6efd !important; 
+        border-radius: 12px !important;
+        padding: 15px !important;
+        background-color: #ffffff !important;
+    }
+
     /* FORÇA BORDA NOS CONTAINERS DENTRO DE MODAIS (st.dialog) */
     div[class*="st-key-modal_box"] {
         border: 1.2px solid #0d6efd !important;
@@ -83,18 +91,35 @@ st.markdown("""
     div[class*="st-key-nav_mes"] button * { color: white !important; }
     div[class*="st-key-nav_mes"] h4 { padding-top: 5px !important; font-size: 14px !important; }
 
-    /* Botões de Ação nos Cards */
+    /* Botões de Ação nos Cards (4 colunas) */
     div[class*="st-key-btn_row_"] div[data-testid="stHorizontalBlock"] {
-        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px !important;
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 2px !important;
     }
     div[class*="st-key-btn_row_"] div[data-testid="stColumn"] {
         min-width: 0 !important; padding: 0 !important;
     }
     div[class*="st-key-btn_row_"] button {
-        font-size: 11px !important; height: 28px !important; min-height: 28px !important;
-        padding: 0 !important; width: 100% !important;
+        font-size: 10px !important; 
+        height: 28px !important; 
+        min-height: 28px !important;
+        padding: 0 2px !important; 
+        width: 100% !important;
         display: flex !important; align-items: center !important; justify-content: center !important;
     }
+
+    /* Botão Limpar Filtros (dentro do modal) */
+    div[class*="st-key-btn_limpar_modal"] button {
+        background-color: #dc3545 !important; 
+        border: 1px solid #dc3545 !important;
+    }
+    div[class*="st-key-btn_limpar_modal"] button * { color: white !important; }
+
+    /* 🎯 BOTÃO LIMPAR NO TOPO (quando filtro está ativo) */
+    div[class*="st-key-btn_limpar_topo"] button {
+        background-color: #dc3545 !important; 
+        border: 1px solid #dc3545 !important;
+    }
+    div[class*="st-key-btn_limpar_topo"] button * { color: white !important; }
 
     /* Checkbox */
     div[data-testid="stCheckbox"] {
@@ -330,12 +355,34 @@ def modal_configuracoes():
         st.rerun()
     st.divider()
     tab_sobre, tab_como, tab_creditos = st.tabs(["Sobre", "Como Usar", "Tecnologias"])
+    
     with tab_sobre:
-        st.markdown("### 💰 Contas a Pagar JEN\n**Versão:** 1.2\nO melhor gerenciador de contas pessoais.")
+        st.markdown("### 💰 Contas a Pagar JEN")
+        st.markdown("**Versão:** 1.2")
+        st.markdown("O melhor gerenciador de contas pessoais. Organize seus pagamentos, acompanhe seus gastos e nunca perca um vencimento.")
+        st.write("")
+        st.markdown("**Desenvolvido em:** Novembro / 2026")
+        st.markdown("**Contato:** automacaodesistemas.jen@gmail.com")
+        
     with tab_como:
-        st.markdown("1. Adicione contas no botão **➕**.\n2. Marque como pagas no botão de status.\n3. Use os filtros **🔍**.")
+        st.markdown("Conheça as funcionalidades de cada botão:")
+        st.markdown("**➕ Adicionar:** Inclui uma nova conta no mês selecionado ou em meses futuros.")
+        st.markdown("**🔍 Filtros:** Pesquisa contas em qualquer período, banco, status ou descrição.")
+        st.markdown("**↕️ Ordenar:** Altera a ordem dos cards (por vencimento, pagos no topo, pendentes no topo).")
+        st.markdown("**📊 Relatório:** Gera um PDF completo com as contas exibidas na tela.")
+        st.markdown("**Marcar Pago/Desmarcar:** Altera o status da conta e registra a data e banco de pagamento.")
+        st.markdown("**Editar:** Modifica o valor, vencimento, banco ou observação de uma conta.")
+        st.markdown("**Copiar:** Duplica a conta para os próximos meses, ajustando os vencimentos.")
+        st.markdown("**Excluir:** Remove a conta definitivamente.")
+        
     with tab_creditos:
-        st.markdown("**Desenvolvido por:** João Evangelista Neto\n**Tecnologias:** Streamlit, Pandas, Google Sheets API.")
+        st.markdown("**Desenvolvido por:** João Evangelista Neto")
+        st.markdown("**Tecnologias Utilizadas:**")
+        st.markdown("- **Python:** Linguagem base do projeto.")
+        st.markdown("- **Streamlit:** Framework para a interface visual.")
+        st.markdown("- **Pandas:** Manipulação dos dados.")
+        st.markdown("- **Google Sheets API:** Armazenamento em nuvem.")
+        st.markdown("- **FPDF:** Geração dos relatórios em PDF.")
 
 @st.dialog("🔍 Filtros Avançados")
 def modal_filtros():
@@ -371,7 +418,7 @@ def modal_filtros():
             st.session_state["modal_filtro_aberto"] = False
             st.rerun()
     with col_btn2:
-        if st.button("Limpar Filtros", use_container_width=True):
+        if st.button("Limpar Filtros", use_container_width=True, key="btn_limpar_modal"):
             st.session_state["filtro_ativo"] = False
             st.session_state["f_desc"] = None
             st.session_state["f_data_ini"] = None
@@ -452,8 +499,8 @@ def fmt_moeda(v):
 
 # ---------------- TELA PRINCIPAL ----------------
 
-# Bloco único com borda
-with st.container(border=True):
+# Bloco único com borda usando key
+with st.container(key="main_box"):
     
     # 1. Navegação do Mês
     if not st.session_state["filtro_ativo"]:
@@ -526,7 +573,7 @@ with st.container(border=True):
     </div>
     """, unsafe_allow_html=True)
 
-    # 🎯 ESPAÇO FALSO EM BRANCO PARA DAR RESPIRO ANTES DA BORDA
+    # Espaço falso em branco
     st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
 # --- FIM DO BLOCO COM BORDA ---
@@ -566,12 +613,12 @@ with st.container(height=500, border=False):
                 bg_color, border_color = "#d4edda", "#198754"
                 btn_bg, btn_border = "#198754", "#198754"
                 selo = '<span style="background:#198754; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👍 PAGO</span>'
-                texto_btn_status = "↩️ Desmarcar"
+                texto_btn_status = "Desmarcar"
             else:
                 bg_color, border_color = "#f8d7da", "#dc3545"
                 btn_bg, btn_border = "#dc3545", "#dc3545"
                 selo = '<span style="background:#dc3545; color:#fff; padding:4px 10px; border-radius:15px; font-size:11px; font-weight:bold;">👎 A PAGAR</span>'
-                texto_btn_status = "✅ Pagar"
+                texto_btn_status = "Marcar Pago"
                 
             st.markdown(f"""
             <style>
@@ -620,7 +667,7 @@ with st.container(height=500, border=False):
                 st.write("")
                 
                 with st.container(key=f"btn_row_{conta.get('ID_Unico', '')}"):
-                    b1, b2, b3, b4 = st.columns([2.5, 1, 1, 1])
+                    b1, b2, b3, b4 = st.columns([2.2, 1, 1, 1])
                     
                     with b1:
                         if st.button(texto_btn_status, key=f"btn_status_{conta.get('ID_Unico', '')}", use_container_width=True):
@@ -631,15 +678,15 @@ with st.container(height=500, border=False):
                                     st.rerun()
                                     
                     with b2:
-                        if st.button("✏️", key=f"btn_edit_{conta.get('ID_Unico', '')}", use_container_width=True, help="Editar"):
+                        if st.button("Editar", key=f"btn_edit_{conta.get('ID_Unico', '')}", use_container_width=True):
                             modal_editar(conta)
                     
                     with b3:
-                        if st.button("📋", key=f"btn_copiar_{conta.get('ID_Unico', '')}", use_container_width=True, help="Copiar"):
+                        if st.button("Copiar", key=f"btn_copiar_{conta.get('ID_Unico', '')}", use_container_width=True):
                             modal_copiar(conta)
                             
                     with b4:
-                        if st.button("🗑️", key=f"btn_del_{conta.get('ID_Unico', '')}", use_container_width=True, help="Excluir"):
+                        if st.button("Excluir", key=f"btn_del_{conta.get('ID_Unico', '')}", use_container_width=True):
                             modal_excluir(conta.get('ID_Unico', ''), conta.get('Descricao', ''))
 
 if st.session_state.get("modal_filtro_aberto", False):
