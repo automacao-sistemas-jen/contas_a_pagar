@@ -17,7 +17,6 @@ st.markdown("""
     header {visibility: hidden;}
     .block-container { padding-top: 1rem; padding-left: 0.5rem; padding-right: 0.5rem; max-width: 600px; }
 
-    /* 🎯 FORÇANDO A BORDA AZUL NO CONTAINER PRINCIPAL VIA KEY */
     div[class*="st-key-main_box"] {
         border: 2px solid #0d6efd !important; 
         border-radius: 12px !important;
@@ -25,7 +24,6 @@ st.markdown("""
         background-color: #ffffff !important;
     }
 
-    /* FORÇA BORDA NOS CONTAINERS DENTRO DE MODAIS (st.dialog) */
     div[class*="st-key-modal_box"] {
         border: 1.2px solid #0d6efd !important;
         border-radius: 10px !important;
@@ -34,7 +32,6 @@ st.markdown("""
         margin-bottom: 10px !important;
     }
 
-    /* Bordas dos inputs */
     div[data-testid="stTextInput"] > div,
     div[data-testid="stTextInput"] div[data-baseweb="base-input"],
     div[data-testid="stTextInputRootElement"],
@@ -61,7 +58,6 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* Barra de Ícones (Azul Claro) */
     div[class*="st-key-nav_icons"] div[data-testid="stHorizontalBlock"] {
         display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 6px !important; margin-top: 10px !important; margin-bottom: 10px !important;
     }
@@ -76,7 +72,6 @@ st.markdown("""
     }
     div[class*="st-key-nav_icons"] button * { color: #0d6efd !important; }
 
-    /* Navegação do Mês */
     div[class*="st-key-nav_mes"] div[data-testid="stHorizontalBlock"] { 
         background-color: #e3f2fd !important; border-radius: 10px !important;
         padding: 2px 6px !important; display: flex !important; flex-direction: row !important;
@@ -91,7 +86,6 @@ st.markdown("""
     div[class*="st-key-nav_mes"] button * { color: white !important; }
     div[class*="st-key-nav_mes"] h4 { padding-top: 5px !important; font-size: 14px !important; }
 
-    /* Botões de Ação nos Cards (4 colunas) */
     div[class*="st-key-btn_row_"] div[data-testid="stHorizontalBlock"] {
         display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 2px !important;
     }
@@ -107,21 +101,18 @@ st.markdown("""
         display: flex !important; align-items: center !important; justify-content: center !important;
     }
 
-    /* Botão Limpar Filtros (dentro do modal) */
     div[class*="st-key-btn_limpar_modal"] button {
         background-color: #dc3545 !important; 
         border: 1px solid #dc3545 !important;
     }
     div[class*="st-key-btn_limpar_modal"] button * { color: white !important; }
 
-    /* 🎯 BOTÃO LIMPAR NO TOPO (quando filtro está ativo) */
     div[class*="st-key-btn_limpar_topo"] button {
         background-color: #dc3545 !important; 
         border: 1px solid #dc3545 !important;
     }
     div[class*="st-key-btn_limpar_topo"] button * { color: white !important; }
 
-    /* Checkbox */
     div[data-testid="stCheckbox"] {
         background-color: #f8f9fa !important; padding: 8px 12px !important;
         border-radius: 8px !important; border: 1.2px solid #0d6efd !important; margin-bottom: 12px !important;
@@ -131,7 +122,6 @@ st.markdown("""
     }
     div[data-testid="stCheckbox"] p { font-size: 15px !important; font-weight: 600 !important; color: #0d6efd !important; }
 
-    /* Botões de Sair */
     div[class*="st-key-btn_sair"] button { background-color: #dc3545 !important; border: 1px solid #dc3545 !important; }
     div[class*="st-key-btn_sair"] button * { color: white !important; }
 </style>
@@ -142,11 +132,10 @@ if "logado" not in st.session_state: st.session_state["logado"] = False
 if "usuario" not in st.session_state: st.session_state["usuario"] = ""
 if "mes_atual" not in st.session_state: st.session_state["mes_atual"] = datetime.date.today().replace(day=1)
 if "filtro_ativo" not in st.session_state: st.session_state["filtro_ativo"] = False
-if "ordenacao_cards" not in st.session_state: st.session_state["ordenacao_cards"] = "padrao"
+if "ordem_padrao" not in st.session_state: st.session_state["ordem_padrao"] = "pendente"
 
 BANCOS = ["", "Banco do Brasil", "Bradesco", "C6 Bank", "Caixa", "Dinheiro", "Inter", "Itaú", "Nubank", "PicPay", "Santander", "Sicredi"]
 
-# ---------------- FUNÇÕES AUXILIARES ----------------
 def obter_nome_mes_atual():
     nome_mes = st.session_state["mes_atual"].strftime("%B de %Y").capitalize()
     meses_en = {"January": "Janeiro", "February": "Fevereiro", "March": "Março", "April": "Abril", "May": "Maio", "June": "Junho", "July": "Julho", "August": "Agosto", "September": "Setembro", "October": "Outubro", "November": "Novembro", "December": "Dezembro"}
@@ -168,7 +157,6 @@ def parse_valor(txt):
     except (InvalidOperation, ValueError):
         raise ValueError("Valor inválido. Exemplo: 100,50.")
 
-# ---------------- GERAÇÃO DE PDF ----------------
 def sanitizar_pdf(texto):
     return str(texto).encode('latin-1', 'replace').decode('latin-1')
 
@@ -232,7 +220,6 @@ def gerar_pdf(contas, periodo_txt=""):
     pdf.ln(5)
     return bytes(pdf.output())
 
-# ---------------- MODAIS ----------------
 @st.dialog("Confirmar Pagamento")
 def modal_pagar(conta_id, valor):
     with st.container(key="modal_box"):
@@ -358,7 +345,7 @@ def modal_configuracoes():
     
     with tab_sobre:
         st.markdown("### 💰 Contas a Pagar JEN")
-        st.markdown("**Versão:** 1.2")
+        st.markdown("**Versão:** 1.3")
         st.markdown("O melhor gerenciador de contas pessoais. Organize seus pagamentos, acompanhe seus gastos e nunca perca um vencimento.")
         st.write("")
         st.markdown("**Desenvolvido em:** Novembro / 2026")
@@ -368,7 +355,7 @@ def modal_configuracoes():
         st.markdown("Conheça as funcionalidades de cada botão:")
         st.markdown("**➕ Adicionar:** Inclui uma nova conta no mês selecionado ou em meses futuros.")
         st.markdown("**🔍 Filtros:** Pesquisa contas em qualquer período, banco, status ou descrição.")
-        st.markdown("**↕️ Ordenar:** Altera a ordem dos cards (por vencimento, pagos no topo, pendentes no topo).")
+        st.markdown("**⬆️ Ordenar:** Alterna entre Pagos no topo (botão verde) e Pendentes no topo (botão vermelho). A preferência é salva automaticamente.")
         st.markdown("**📊 Relatório:** Gera um PDF completo com as contas exibidas na tela.")
         st.markdown("**Marcar Pago/Desmarcar:** Altera o status da conta e registra a data e banco de pagamento.")
         st.markdown("**Editar:** Modifica o valor, vencimento, banco ou observação de uma conta.")
@@ -439,6 +426,7 @@ if not st.session_state["logado"]:
             if gs.autenticar_usuario(email, senha):
                 st.session_state["logado"] = True
                 st.session_state["usuario"] = email.lower()
+                st.session_state["ordem_padrao"] = gs.carregar_preferencia_ordem(email.lower())
                 st.rerun()
             else:
                 st.error("E-mail ou senha incorretos.")
@@ -482,10 +470,8 @@ def _parse_data(v):
     try: return datetime.datetime.strptime(v, '%d/%m/%Y')
     except: return datetime.datetime.max
 
-modo = st.session_state["ordenacao_cards"]
-if modo == "padrao":
-    contas_exibicao = sorted(contas_exibicao, key=lambda c: _parse_data(c.get('Vencimento', '')))
-elif modo == "pago":
+ordem = st.session_state["ordem_padrao"]
+if ordem == "pago":
     contas_exibicao = sorted(contas_exibicao, key=lambda c: (0 if c.get('Status') == 'Pago' else 1, _parse_data(c.get('Vencimento', ''))))
 else:
     contas_exibicao = sorted(contas_exibicao, key=lambda c: (0 if c.get('Status') == 'Pendente' else 1, _parse_data(c.get('Vencimento', ''))))
@@ -499,10 +485,22 @@ def fmt_moeda(v):
 
 # ---------------- TELA PRINCIPAL ----------------
 
-# Bloco único com borda usando key
+# CSS dinâmico para o botão de ordenação
+cor_order = "#198754" if ordem == "pago" else "#dc3545"
+st.markdown(f"""
+<style>
+div[class*="st-key-nav_icons"] div[class*="st-key-btn_order"] button {{
+    background-color: {cor_order} !important;
+    border-color: {cor_order} !important;
+}}
+div[class*="st-key-nav_icons"] div[class*="st-key-btn_order"] button * {{
+    color: white !important;
+}}
+</style>
+""", unsafe_allow_html=True)
+
 with st.container(key="main_box"):
     
-    # 1. Navegação do Mês
     if not st.session_state["filtro_ativo"]:
         with st.container(key="nav_mes"):
             col_prev, col_titulo, col_next = st.columns([1, 2, 1])
@@ -530,7 +528,6 @@ with st.container(key="main_box"):
                 st.session_state["f_status"] = None
                 st.rerun()
 
-    # 2. Barra de Ícones
     with st.container(key="nav_icons"):
         c1, c2, c3, c4, c5 = st.columns(5)
         with c1:
@@ -544,18 +541,16 @@ with st.container(key="main_box"):
                 st.session_state["modal_filtro_aberto"] = True
                 st.rerun()
         with c4:
-            icones = {"padrao": "↕️", "pago": "⬆️", "pendente": "⬇️"}
-            estado = st.session_state["ordenacao_cards"]
-            if st.button(icones[estado], use_container_width=True, key="btn_order", help="Ordenar"):
-                proximo = {"padrao": "pago", "pago": "pendente", "pendente": "padrao"}
-                st.session_state["ordenacao_cards"] = proximo[estado]
+            # Botão de ordenação único: muda entre pago/pendente
+            if st.button("⬆️", use_container_width=True, key="btn_order", help="Alternar Ordenação (Pago/Pendente no Topo)"):
+                st.session_state["ordem_padrao"] = "pendente" if ordem == "pago" else "pago"
+                gs.salvar_preferencia_ordem(st.session_state["usuario"], st.session_state["ordem_padrao"])
                 st.rerun()
         with c5:
             if st.button("📊", use_container_width=True, help="Relatório PDF"):
                 st.session_state["_gerar_relatorio"] = True
                 st.rerun()
 
-    # 3. Totais / Cards de Resumo
     st.markdown(f"""
     <div style="display: flex; justify-content: space-between; gap: 8px; margin-top: 5px;">
         <div style="flex: 1; background: #e3f2fd; padding: 5px; border-radius: 10px; text-align: center; border: 1px solid #b6d4fe;">
@@ -573,12 +568,8 @@ with st.container(key="main_box"):
     </div>
     """, unsafe_allow_html=True)
 
-    # Espaço falso em branco
     st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
-# --- FIM DO BLOCO COM BORDA ---
-
-# Ação do Botão de Relatório
 if st.session_state.get("_gerar_relatorio", False):
     st.session_state["_gerar_relatorio"] = False
     if st.session_state["filtro_ativo"]:
@@ -600,7 +591,6 @@ if st.session_state.get("_gerar_relatorio", False):
 
 st.write("")
 
-# Cards List
 with st.container(height=500, border=False):
     if not contas_exibicao:
         st.info("Nenhuma conta encontrada.")

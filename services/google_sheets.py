@@ -6,8 +6,10 @@ import hashlib
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 SPREADSHEET_ID = "1x6v-gZnPsgBGhgkpf82qYG-9tnA9qirG-mQDbyaNMZs"
 USUARIOS_WORKSHEET = "Usuarios"
+PREF_WORKSHEET = "Preferencias"
 
 _usuarios_worksheet_cache = None
+_pref_worksheet_cache = None
 
 def _get_credentials():
     if "gcp_service_account" in st.secrets:
@@ -31,6 +33,20 @@ def _get_usuarios_ws():
             ws.append_row(["Email", "Senha_Hash"])
             _usuarios_worksheet_cache = ws
     return _usuarios_worksheet_cache
+
+def _get_pref_ws():
+    global _pref_worksheet_cache
+    if _pref_worksheet_cache is None:
+        creds = _get_credentials()
+        client = gspread.authorize(creds)
+        planilha = client.open_by_key(SPREADSHEET_ID)
+        try:
+            _pref_worksheet_cache = planilha.worksheet(PREF_WORKSHEET)
+        except gspread.exceptions.WorksheetNotFound:
+            ws = planilha.add_worksheet(title=PREF_WORKSHEET, rows="100", cols="2")
+            ws.append_row(["Email", "Ordem_Padrao"])
+            _pref_worksheet_cache = ws
+    return _pref_worksheet_cache
 
 def _hash_senha(senha: str) -> str:
     return hashlib.sha256(senha.encode()).hexdigest()
@@ -61,8 +77,35 @@ def autenticar_usuario(email: str, senha: str) -> bool:
         print(f"[google_sheets] erro ao autenticar: {e}")
         return False
 
+def carregar_preferencia_ordem(email):
+    try:
+        ws = _get_pref_ws()
+        registros = ws.get_all_records()
+        for reg in registros:
+            if str(reg.get("Email", "")).lower() == email.lower():
+                v = str(reg.get("Ordem_Padrao", "")).strip().lower()
+                if v in ["pago", "pendente"]:
+                    return v
+        return "pendente"
+    except Exception as e:
+        print(f"Erro ao carregar preferência: {e}")
+        return "pendente"
+
+def salvar_preferencia_ordem(email, ordem):
+    try:
+        ws = _get_pref_ws()
+        cell = ws.find(email.lower())
+        if cell:
+            ws.update_cell(cell.row, 2, ordem)
+        else:
+            ws.append_row([email.lower(), ordem])
+        return True
+    except Exception as e:
+        print(f"Erro ao salvar preferência: {e}")
+        return False
+
 # ---------------------------------------------------------------------------
-# Funções para Contas a Pagar (Centavos)
+# Funções para Contas a Pagar
 # ---------------------------------------------------------------------------
 CONTAS_WORKSHEET = "Contas"
 _contas_worksheet_cache = None
@@ -75,12 +118,13 @@ def _get_contas_ws():
         planilha = client.open_by_key(SPREADSHEET_ID)
         try:
             _contas_worksheet_cache = planilha.worksheet(CONTAS_WORKSHEET)
+            headers = _contas_worksheet_cache.row_values(1)
+            if len(headers) < 10 or "Banco" not in headers:
+                _contas_worksheet_cache.resize(cols=10)
+                _contas_worksheet_cache.update_cell(1, 10, "Banco")
         except gspread.exceptions.WorksheetNotFound:
             ws = planilha.add_worksheet(title=CONTAS_WORKSHEET, rows="1000", cols="10")
-            ws.append_row([
-                "ID_Unico", "Email", "Mes_Ref", "Descricao", "Valor_Centavos",
-                "Vencimento", "Status", "Data_Pagamento", "Observacao", "Banco"
-            ])
+            ws.append_row(["ID_Unico", "Email", "Mes_Ref", "Descricao", "Valor_Centavos", "Vencimento", "Status", "Data_Pagamento", "Observacao", "Banco"])
             _contas_worksheet_cache = ws
     return _contas_worksheet_cache
 
@@ -127,7 +171,6 @@ def _ler_todas_linhas(ws):
             if len(row) < len(headers):
                 row = list(row) + [""] * (len(headers) - len(row))
             reg = dict(zip(headers, row))
-            # Sempre expõe "Valor" em reais (float), a partir dos centavos
             try:
                 v_cent = reg.get("Valor_Centavos", "0")
                 if v_cent == "" or v_cent is None:
