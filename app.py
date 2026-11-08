@@ -355,7 +355,7 @@ def modal_configuracoes():
         st.markdown("Conheça as funcionalidades de cada botão:")
         st.markdown("**➕ Adicionar:** Inclui uma nova conta no mês selecionado ou em meses futuros.")
         st.markdown("**🔍 Filtros:** Pesquisa contas em qualquer período, banco, status ou descrição.")
-        st.markdown("**⬆️ Ordenar:** Alterna entre Pagos no topo (botão verde) e Pendentes no topo (botão vermelho). A preferência é salva automaticamente.")
+        st.markdown("**⇧ Ordenar:** Alterna entre Pagos no topo (botão verde) e Pendentes no topo (botão vermelho). A preferência é salva automaticamente.")
         st.markdown("**📊 Relatório:** Gera um PDF completo com as contas exibidas na tela.")
         st.markdown("**Marcar Pago/Desmarcar:** Altera o status da conta e registra a data e banco de pagamento.")
         st.markdown("**Editar:** Modifica o valor, vencimento, banco ou observação de uma conta.")
@@ -542,7 +542,7 @@ with st.container(key="main_box"):
                 st.rerun()
         with c4:
             # Botão de ordenação único: muda entre pago/pendente
-            if st.button("⬆️", use_container_width=True, key="btn_order", help="Alternar Ordenação (Pago/Pendente no Topo)"):
+            if st.button("⇧", use_container_width=True, key="btn_order", help="Alternar Ordenação (Pago/Pendente no Topo)"):
                 st.session_state["ordem_padrao"] = "pendente" if ordem == "pago" else "pago"
                 gs.salvar_preferencia_ordem(st.session_state["usuario"], st.session_state["ordem_padrao"])
                 st.rerun()
