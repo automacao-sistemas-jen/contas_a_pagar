@@ -75,7 +75,7 @@ st.markdown("""
     /* 🎯 AUMENTANDO A SETA DO BOTÃO DE ORDENAÇÃO */
     div[class*="st-key-nav_icons"] div[class*="st-key-btn_order"] button,
     div[class*="st-key-nav_icons"] div[class*="st-key-btn_order"] button * {
-        font-size: 28px !important;
+        font-size: 24px !important;
         line-height: 1 !important;
     }
 
