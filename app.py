@@ -72,6 +72,13 @@ st.markdown("""
     }
     div[class*="st-key-nav_icons"] button * { color: #0d6efd !important; }
 
+    /* 🎯 AUMENTANDO A SETA DO BOTÃO DE ORDENAÇÃO */
+    div[class*="st-key-nav_icons"] div[class*="st-key-btn_order"] button,
+    div[class*="st-key-nav_icons"] div[class*="st-key-btn_order"] button * {
+        font-size: 28px !important;
+        line-height: 1 !important;
+    }
+
     div[class*="st-key-nav_mes"] div[data-testid="stHorizontalBlock"] { 
         background-color: #e3f2fd !important; border-radius: 10px !important;
         padding: 2px 6px !important; display: flex !important; flex-direction: row !important;
